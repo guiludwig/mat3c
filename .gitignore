@@ -3,6 +3,9 @@
 .Rhistory
 .RData
 .Ruserdata
+.Rbuildignore
 *.o
 *.so
 *.dll
+*~
+.gitignore
