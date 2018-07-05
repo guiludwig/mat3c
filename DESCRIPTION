@@ -1,0 +1,21 @@
+Package: mat3c
+Depends:
+    R (>= 3.3.0),
+    MASS,
+    spatstat,
+    circular
+Imports:
+    Rcpp (>= 0.12.13),
+    RcppArmadillo (>= 0.8.100.1.0)
+LinkingTo: Rcpp, RcppArmadillo
+Type: Package
+Title: Marked spatial point processes with inhibition based on Matern-III clustered marks
+Version: 0.1.8
+Author: Nancy Garcia [aut,cre], Guilherme Ludwig [aut]
+Maintainer: Guilherme Ludwig <gvludwig@ime.unicamp.br>
+Description: Provides functions that simulate and estimate (via MCMC) marked spatial point 
+    processes that show inhibition based on Matern-III clustered marks.
+License: GPL (>= 2)
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 6.0.1
