@@ -406,12 +406,16 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
 
   parameters <- cbind(beta, phi, gamma, sigma, kappa)
   colnames(parameters) <- c("beta","phi","gamma","sigma","kappa")
-  return(list(parameters = parameters,
-              augmentedData = fmat.cond,
-              window = win,
-              R_centers = R_centers,
-              R_clusters = R_clusters,
-              suffMCMC = suff.mcmc,
-              logPriors = logPriors))
+
+  results <- list(parameters = parameters,
+                  augmentedData = fmat.cond,
+                  window = win,
+                  R_centers = R_centers,
+                  R_clusters = R_clusters,
+                  suffMCMC = suff.mcmc,
+                  logPriors = logPriors)
+  class(results) <- c("fitmat3", "list")
+
+  return(results)
 
 }
