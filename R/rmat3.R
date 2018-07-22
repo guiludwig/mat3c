@@ -54,14 +54,18 @@
 rmat3 <- function(beta, phi, gamma, sigma, kappa,
                   win = owin(c(0,1), c(0,1)),
                   R_clusters = 0.005, R_centers = 0.02,
-                  time = 30, death = 1, returnTimes = FALSE,
+                  time = 30, death = 1,
+                  returnTimes = FALSE, returnThinned = FALSE,
                   formatData = NULL, ...){
+
+  if(returnThinned) returnTimes = TRUE
 
   limx <- win$xrange
   limy <- win$yrange
 
   dominant <- geradorVonmisesMCMC(beta, phi, gamma, sigma, kappa, win,
-                                  R_centers, R_clusters, time, death)
+                                  R_centers, R_clusters, time, death,
+                                  completeObs = returnThinned)
 
   if(returnTimes){
     fmat <- vector("list", sum(sapply(dominant, function(x) x$color == "keep")))
@@ -76,7 +80,9 @@ rmat3 <- function(beta, phi, gamma, sigma, kappa,
       if(length(dominant[[i]]$fingers) > 0){
         temp <- matrix(matrix(dominant[[i]]$fingers, ncol = 3)[, 1:2], ncol = 2)
         ordem <- order(matrix(dominant[[i]]$fingers, ncol = 3)[, 3])
-        if(returnTimes){
+        if(returnThinned){
+          fmat[[k]] <- list(centers = c(dominant[[i]]$centers[1], dominant[[i]]$centers[2]), x = temp[ordem, 1], y = temp[ordem, 2], t = sort(matrix(dominant[[i]]$fingers, ncol = 3)[, 3]), direcao = dominant[[i]]$direction, thinned = dominant[[i]]$thinned) # complete process (centers, fingers) + directions + times of birth
+        } else if(returnTimes){
           fmat[[k]] <- list(centers = c(dominant[[i]]$centers[1], dominant[[i]]$centers[2]), x = temp[ordem, 1], y = temp[ordem, 2], t = sort(matrix(dominant[[i]]$fingers, ncol = 3)[, 3]), direcao = dominant[[i]]$direction) # complete process (centers, fingers) + directions + times of birth
         } else {
           final[[k]] <- list(centers = c(dominant[[i]]$centers[1], dominant[[i]]$centers[2]), fingers = temp) # final process of centers and fingers

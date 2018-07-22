@@ -1,8 +1,7 @@
 geradorVonmisesMCMC <- function(beta, phi, gamma, sigma, kappa,
                                 win, Rc = R_centers, R = R_clusters,
-                                TIME = 30, DEATH = 1){
+                                TIME = 30, DEATH = 1, completeObs = FALSE){
 
-  # Debug: x <- mat3c:::geradorVonmisesMCMC(100,4,20,.05,3,owin(), 0.05, 0.02, 30, 1)
   pp_germ <- rpoispp(beta*TIME, win = win) # possible location of centers
   while(pp_germ$n == 0){
     pp_germ <- rpoispp(beta*TIME, win = win)
@@ -64,6 +63,8 @@ geradorVonmisesMCMC <- function(beta, phi, gamma, sigma, kappa,
 
     ind.fingers <- nextFingers(marked.n, fingers0, R)
     dominant[[j2]]$fingers <- fingers0[ind.fingers, 1:3, drop = FALSE]
+
+    if(completeObs) dominant[[j2]]$thinned <- fingers0[!ind.fingers, 1:3, drop = FALSE]
 
   }
 

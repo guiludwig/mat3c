@@ -6,7 +6,7 @@
 \usage{
 rmat3(beta, phi, gamma, sigma, kappa, win = owin(c(0, 1), c(0, 1)),
   R_clusters = 0.005, R_centers = 0.02, time = 30, death = 1,
-  returnTimes = FALSE, formatData = NULL, ...)
+  returnTimes = FALSE, returnThinned = FALSE, formatData = NULL, ...)
 }
 \arguments{
 \item{beta}{Intensity of the dominant Poisson process.}
