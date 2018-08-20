@@ -98,6 +98,7 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
                     logPriors = preparePriors(),
                     initialValues = pickInitialValues(),
                     GeyerThompson = c("large", "resample", "importance", "simple"),
+                    candidateVar = c(0.1, 0.1, 0.1, 0.1, 0.1),
                     ...){
 
   set.seed(seed)
@@ -160,6 +161,8 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
   phi.p   <- initialValues$iniPhi()
   kappa.p <- initialValues$iniKappa(angles)
   sigma.p <- initialValues$iniSigma(fmat)
+
+  if(phi.p < 1) phi.p <- 1
 
   ##############################################################
   ######################## Step 2: MCMC ########################
@@ -283,7 +286,7 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
 
     fmat.cond <- resampleTimes(fmat.cond, R = R_clusters)
 
-    beta.tent <- exp(rnorm(1, log(beta[l-1]), 0.1))
+    beta.tent <- exp(rnorm(1, log(beta[l-1]), candidateVar[1]))
     prob1 <- posterioriBeta(fmat.cond, beta.tent, phi[l-1], gamma[l-1], sigma[l-1], kappa[l-1],
                             BETA.P = beta.p, suff.beta.phi, theta.fixo, suff.mcmc,
                             SFALL = suff.all,
@@ -305,7 +308,10 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
       beta[l] <- beta[l-1]
     }
 
-    phi.tent <- exp(rnorm(1, log(phi[l-1]), 0.1))
+    phi.tent <- exp(rnorm(1, log(phi[l-1]), candidateVar[2]))
+    while(phi.tent < 1) {
+      phi.tent <- exp(rnorm(1, log(phi[l-1]), candidateVar[2]))
+    }
     prob1 <- posterioriPhi(fmat.cond, beta[l], phi.tent, gamma[l-1], sigma[l-1], kappa[l-1],
                            PHI.P = phi.p,
                            suff.beta.phi, theta.fixo, suff.mcmc,
@@ -326,8 +332,7 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
       phi[l] <- phi[l-1]
     }
 
-    gamma.tent <- exp(rnorm(1, log(gamma[l-1]), 0.1))
-
+    gamma.tent <- exp(rnorm(1, log(gamma[l-1]), candidateVar[3]))
     prob1 <- posterioriGamma(fmat.cond, beta[l], phi[l], gamma.tent, sigma[l-1], kappa[l-1],
                              GAMMA.P = gamma.p,
                              SFALL = suff.all,
@@ -349,8 +354,7 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
       gamma[l] <- gamma[l-1]
     }
 
-    sigma.tent <- exp(rnorm(1, log(sigma[l-1]), 0.1))
-
+    sigma.tent <- exp(rnorm(1, log(sigma[l-1]), candidateVar[4]))
     prob1 <- posterioriSigma(fmat.cond, beta[l], phi[l], gamma[l], sigma.tent, kappa[l-1],
                              SIGMA.P = sigma.p,
                              A1 = a1, A2 = a2, B1 = b1, B2 = b2,
@@ -371,8 +375,7 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
       sigma[l] <- sigma[l-1]
     }
 
-    kappa.tent <- exp(rnorm(1, log(kappa[l-1]), 0.1))
-
+    kappa.tent <- exp(rnorm(1, log(kappa[l-1]), candidateVar[5]))
     prob1 <- posterioriKappa(fmat.cond, beta[l], phi[l], gamma[l], sigma[l], kappa.tent,
                              KAPPA.P = kappa.p,
                              A1 = a1, A2 = a2, B1 = b1, B2 = b2,

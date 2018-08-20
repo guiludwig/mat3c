@@ -8,7 +8,8 @@ fitmat3(mat3, fname = c("centers.txt", "fingers.txt"), win = owin(c(0, 1),
   c(0, 1)), R_clusters = 0.005, R_centers = 0.02, L = 10000, N = 10000,
   J = 100, seed = NULL, resultsName = NULL, logPriors = preparePriors(),
   initialValues = pickInitialValues(), GeyerThompson = c("large",
-  "resample", "importance", "simple"), ...)
+  "resample", "importance", "simple"), candidateVar = c(0.1, 0.1, 0.1, 0.1,
+  0.1), ...)
 }
 \arguments{
 \item{mat3}{A mat3 object, see \code{\link{rmat3}}. If reading from a data file,
