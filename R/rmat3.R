@@ -40,7 +40,10 @@
 #' plot(envelope(ppp(z[1,],z[2,])))
 #' # Saves data to  files "centers.txt" and "fingers.txt"
 #' \dontrun{set.seed(1234)
-#' x <- rmat3(70, 2, 5, 0.05, 3, formatData = c("centers.txt", "fingers.txt"))}
+#' x <- rmat3(70, 2, 5, 0.05, 3, formatData = c("centers.txt", "fingers.txt"))
+#' # When phi < 1, uses MCMC
+#' x <- rmat3(70, 1/2, 5, 0.05, 3)
+#' }
 #'
 #' @author Guilherme Ludwig and Nancy Garcia
 #'
@@ -59,6 +62,104 @@ rmat3 <- function(beta, phi, gamma, sigma, kappa,
                   formatData = NULL, ...){
 
   if(returnThinned) returnTimes = TRUE
+
+  if(phi < 1){
+
+    # Initial configuration:
+    attempt  <- rmat3(beta, 1, gamma, sigma, kappa,
+                      win, R_clusters, R_centers,
+                      time, death,
+                      returnTimes, returnThinned)
+    # attempt <- runifpoint(1, win = win)
+
+    for(i in 1:max(10*length(attempt), 1000)){ # Illian et al. suggestion: 10*n
+
+      print(i)
+      add <- sample(c(TRUE, FALSE), 1)
+
+      if(add){
+        x_new <- runifpoint(1, win = win)
+        m <- length(attempt)
+
+        # Test inclusion
+
+        # If the point pattern is empty, add automatically
+        if(m >= 1){
+          nearbyFinger <- 0
+          for(i in seq_along(attempt)){
+            nearbyFinger <- nearbyFinger + sum(rowSums(sweep(attempt[[i]]$fingers,
+                                                             2,
+                                                             c(x_new$x, x_new$y))^2) < R_centers)
+          }
+
+          rho_birth <- area(win)*beta*exp(-log(phi)*nearbyFinger)/(m+1)
+          alpha_birth <- min(rho_birth, 1)
+          if(runif(1) > alpha_birth) next() # Skip iteration if failure
+        }
+
+        candidate <- list(centers = c(x_new$x, x_new$y))
+
+        # If successful, adds fingers:
+
+        mux <- x_new$x
+        muy <- x_new$y
+        dir <- runif(1, 0, 2*pi)
+
+        marked.locations <- geradorVonmises(dir, gamma, c(mux, muy), kappa, sigma, win)
+        marked.n <- nrow(marked.locations)
+
+        marked.times <- runif(marked.n)
+        ordem <- order(marked.times)
+        fingers0 <- matrix(c(marked.locations[ordem, 1],
+                             marked.locations[ordem, 2],
+                             marked.times[ordem]),
+                           nrow = marked.n, ncol = 3)
+
+        ind.fingers <- nextFingers(marked.n, fingers0, R_clusters)
+
+        if(returnTimes) {
+          candidate$fingers <- fingers0[ind.fingers, 1:3, drop = FALSE]
+          if(returnThinned) candidate$thinned <- fingers0[!ind.fingers, 1:3, drop = FALSE]
+        } else {
+          candidate$fingers <- fingers0[ind.fingers, 1:2, drop = FALSE]
+        }
+
+
+        attempt <- append(attempt, list(candidate))
+
+      } else {
+        m <- length(attempt)
+        k <- sample(seq_along(attempt), 1)
+
+        # Test deletion
+
+        # If the point pattern is empty, skip iteration
+        if(length(attempt) == 0){
+          next()
+        }
+        nearbyFinger <- 0
+        for(i in seq_along(attempt)[-k]){
+          nearbyFinger <- nearbyFinger + sum(rowSums(sweep(attempt[[i]]$fingers,
+                                                           2,
+                                                           attempt[[k]]$centers)^2) < R_centers)
+        }
+
+        rho_death <- (m-1)*exp(log(phi)*nearbyFinger)/(area(win)*beta)
+        alpha_death <- min(rho_death, 1)
+
+        # If successful
+        if(runif(1) < alpha_death) {
+          attempt[[k]] <- NULL
+        }
+
+      }
+
+    }
+
+    class(attempt)  <- "mat3"
+    return(attempt)
+
+  }
 
   limx <- win$xrange
   limy <- win$yrange

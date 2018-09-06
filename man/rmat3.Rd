@@ -61,7 +61,10 @@ plot(Kest(ppp(z[1,],z[2,])))
 plot(envelope(ppp(z[1,],z[2,])))
 # Saves data to  files "centers.txt" and "fingers.txt"
 \dontrun{set.seed(1234)
-x <- rmat3(70, 2, 5, 0.05, 3, formatData = c("centers.txt", "fingers.txt"))}
+x <- rmat3(70, 2, 5, 0.05, 3, formatData = c("centers.txt", "fingers.txt"))
+# When phi < 1, uses MCMC but returns a warning
+x <- rmat3(70, 1/2, 5, 0.05, 3)
+}
 
 }
 \references{
