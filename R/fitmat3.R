@@ -40,7 +40,9 @@
 #'              samples from which the Geyer-Thompson approximation ot the likelihood is
 #'              built; "importance" uses J samples, but they are updated at every 100
 #'              iterations. "simple" works like "importance", but sets phi = 1. "Resample"
-#'              uses a resample method on existing finger configurations.
+#'              uses a resample method on existing finger
+#' @param candidateVar Variability of MCMC candidate selection step, if tuning is necessary.
+#' @param verbose Prints acceptance rates for candidates. Defaults to TRUE.
 #' @param ... further arguments passed to \code{\link{read.table}}.
 #'
 #' @export
@@ -55,7 +57,7 @@
 #' x <- rmat3(70, 2, 5, 0.05, 3)
 #' plot(x)
 #' # Changing default sampling sizes to make it run fast
-#' model <- fitmat3(x, L = 99, N = 1000, J = 40, seed = 1234)
+#' model <- fitmat3(x, L = 100, N = 1000, J = 2, seed = 1234)
 #' burnin <- 20
 #' layout(matrix(c(1:5,0), ncol=2))
 #' plot(model$parameters[-c(1:burnin),1], type="l", ylab="beta")
@@ -69,7 +71,7 @@
 #' abline(h = 20, col = "Red")
 #' plot(model$parameters[-c(1:burnin),4], type="l", ylab="sigma")
 #' abline(h = median(model$parameters[-c(1:burnin),4]))
-#' abline(h = 0.025, col = "Red")
+#' abline(h = 0.05, col = "Red")
 #' plot(model$parameters[-c(1:burnin),5], type="l", ylab="kappa")
 #' abline(h = median(model$parameters[-c(1:burnin),5]))
 #' abline(h = 3, col = "Red")
@@ -98,7 +100,8 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
                     logPriors = preparePriors(),
                     initialValues = pickInitialValues(),
                     GeyerThompson = c("large", "resample", "importance", "simple"),
-                    candidateVar = c(0.1, 0.1, 0.1, 0.1, 0.1),
+                    candidateVar = c(0.1, 0.2, 0.1, 0.1, 0.1),
+                    verbose = TRUE,
                     ...){
 
   set.seed(seed)
@@ -182,7 +185,7 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
                       importance = sampleZ1(beta.p, phi.p, gamma.p, sigma.p, kappa.p,
                                             win, J, R_centers, R_clusters,
                                             debug = TRUE))
-  cat(paste0("l = ",1,"\n"))
+  if(verbose) cat(paste0("l = ",1,"\n"))
 
   # sampled parameters initialization
   beta <- rep(0, L)
@@ -198,8 +201,6 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
   kappa[1] <- kappa.p
 
   fmat.cond <- sampleThin(fmat, gamma[1], kappa[1], sigma[1], win, R_clusters, up.0)
-
-  ini <- 2
 
   # ff <- function(x) posterioriBeta(fmat.cond, beta = x,
   #                                 phi = phi.p, gamma = gamma.p,
@@ -251,6 +252,14 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
                                 NN = N, Rc = R_centers, R = R_clusters,
                                 logpriorKappa = logPriors$priorKappa)
 
+  if(!is.null(resultsName)){
+    write.table(t(c(beta[1], phi[1], gamma[1], sigma[1], kappa[1])),
+                file = resultsName,
+                append = TRUE, row.names = FALSE, col.names = FALSE)
+  }
+
+  ini <- 2
+
   for (l in ini:L) {
 
     if (l %% 100 == 1) {
@@ -282,7 +291,7 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
                                   A1 = a1, A2 = a2, B1 = b1, B2 = b2,
                                   NN = N, Rc = R_centers, R = R_clusters)
 
-    cat(paste0("l = ",l,"\n"))
+    if(verbose) cat(paste0("l = ",l,"\n"))
 
     fmat.cond <- resampleTimes(fmat.cond, R = R_clusters)
 
@@ -299,8 +308,8 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
     const <- beta.tent/beta[l-1]
     accept1 <- const*exp(prob1-prob0beta)
 
-    cat(paste0("\t ratio beta = ", const, "\t"))
-    cat(paste0("\t accept = ", accept1, "\n"))
+    if(verbose) cat(paste0("\t ratio beta = ", const, "\t"))
+    if(verbose) cat(paste0("\t accept = ", accept1, "\n"))
 
     if (!is.nan(accept1) && runif(1) < min(1, accept1)) {
       beta[l] <- beta.tent
@@ -308,9 +317,14 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
       beta[l] <- beta[l-1]
     }
 
-    phi.tent <- exp(rnorm(1, log(phi[l-1]), candidateVar[2]))
-    while(phi.tent < 1) {
+    p.mass <- pnorm(1, log(phi[l-1]), candidateVar[2])
+    if(runif(1) < p.mass){
+      phi.tent <- 1
+    } else {
       phi.tent <- exp(rnorm(1, log(phi[l-1]), candidateVar[2]))
+      while(phi.tent < 1) {
+        phi.tent <- exp(rnorm(1, log(phi[l-1]), candidateVar[2]))
+      }
     }
     prob1 <- posterioriPhi(fmat.cond, beta[l], phi.tent, gamma[l-1], sigma[l-1], kappa[l-1],
                            PHI.P = phi.p,
@@ -325,6 +339,9 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
 
     const <- phi.tent/phi[l-1]
     accept1 <- const*exp(prob1-prob0phi)
+
+    if(verbose) cat(paste0("\t ratio phi = ", const, "\t"))
+    if(verbose) cat(paste0("\t accept = ", accept1, "\n"))
 
     if (!is.nan(accept1) && runif(1) < min(1, accept1)) {
       phi[l] <- phi.tent
@@ -345,8 +362,8 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
     const <- gamma.tent/gamma[l-1]
     accept1 <- const*exp(prob1-prob0gamma)
 
-    cat(paste0("\t ratio gamma = ", const, "\t"))
-    cat(paste0("\t accept = ", accept1, "\n"))
+    if(verbose) cat(paste0("\t ratio gamma = ", const, "\t"))
+    if(verbose) cat(paste0("\t accept = ", accept1, "\n"))
 
     if (!is.nan(accept1) && runif(1) < min(1, accept1)) {
       gamma[l] <- gamma.tent
@@ -369,6 +386,9 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
     const <- sigma.tent/sigma[l-1]
     accept1 <- const*exp(prob1-prob0sigma)
 
+    if(verbose) cat(paste0("\t ratio sigma = ", const, "\t"))
+    if(verbose) cat(paste0("\t accept = ", accept1, "\n"))
+
     if (!is.nan(accept1) && runif(1) < min(1, accept1)) {
       sigma[l] <- sigma.tent
     } else {
@@ -389,6 +409,9 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
 
     const <- kappa.tent/kappa[l-1]
     accept1 <- const*exp(prob1-prob0kappa)
+
+    if(verbose) cat(paste0("\t ratio kappa = ", const, "\t"))
+    if(verbose) cat(paste0("\t accept = ", accept1, "\n"))
 
     if (!is.nan(accept1) && runif(1) < min(1, accept1)) {
       kappa[l] <- kappa.tent

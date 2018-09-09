@@ -9,12 +9,13 @@ rmat3(beta, phi, gamma, sigma, kappa, win = owin(c(0, 1), c(0, 1)),
   returnTimes = FALSE, returnThinned = FALSE, formatData = NULL, ...)
 }
 \arguments{
-\item{beta}{Intensity of the dominant Poisson process.}
+\item{beta}{Intensity of the dominant Poisson process, stricitly greater than 0.}
 
 \item{phi}{Centers' inhibition parameter; rate in which centers are deleted based
-on how many fingers from other centers surround it.}
+on how many fingers from other centers surround it. We only allow
+inhibition, so phi >= 1.}
 
-\item{gamma}{Average number of fingers generated.}
+\item{gamma}{Average number of fingers generated, must be strictly greater than 0.}
 
 \item{sigma}{Length (in standard deviations, according to half-Normal distribution)
 of fingers.}
@@ -62,7 +63,7 @@ plot(envelope(ppp(z[1,],z[2,])))
 # Saves data to  files "centers.txt" and "fingers.txt"
 \dontrun{set.seed(1234)
 x <- rmat3(70, 2, 5, 0.05, 3, formatData = c("centers.txt", "fingers.txt"))
-# When phi < 1, uses MCMC but returns a warning
+# When phi < 1, uses MCMC
 x <- rmat3(70, 1/2, 5, 0.05, 3)
 }
 

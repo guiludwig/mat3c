@@ -2,10 +2,11 @@
 #'
 #' Generates a sample from Matern-III marked spatial point process
 #'
-#' @param beta Intensity of the dominant Poisson process.
+#' @param beta Intensity of the dominant Poisson process, stricitly greater than 0.
 #' @param phi Centers' inhibition parameter; rate in which centers are deleted based
-#'            on how many fingers from other centers surround it.
-#' @param gamma Average number of fingers generated.
+#'            on how many fingers from other centers surround it. We only allow
+#'            inhibition, so phi >= 1.
+#' @param gamma Average number of fingers generated, must be strictly greater than 0.
 #' @param sigma Length (in standard deviations, according to half-Normal distribution)
 #'              of fingers.
 #' @param kappa Concentration parameter from von Mises distribution.
@@ -64,6 +65,8 @@ rmat3 <- function(beta, phi, gamma, sigma, kappa,
   if(returnThinned) returnTimes = TRUE
 
   if(phi < 1){
+
+    stop("sampling when phi < 1 not possible.")
 
     # Initial configuration:
     attempt  <- rmat3(beta, 1, gamma, sigma, kappa,

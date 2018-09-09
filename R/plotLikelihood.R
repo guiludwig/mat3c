@@ -38,99 +38,112 @@ plotLikelihood <- function(final,
                            fname = NULL,
                            logv = TRUE){
 
-  GeyerThompson <- match.arg(GeyerThompson)
+  if(any(class(final) == "fitmat3")) {
 
-  if(!is.na(final[1])){
-    fmat <- lapply(final, function(x) list(centers = x$centers, x = x$fingers[,1], y = x$fingers[,2]))
-  } else if(!is.null(fname)) {
-    centers <- read.table(fname[1])
-    fingers <- read.table(fname[2])
-    fmat <- vector("list", length(centers$Tree))
-    final <- vector("list", length(centers$Tree))
-    for (i in 1:length(centers$Tree)) {
-      temp <- matrix(cbind(fingers$X[fingers$Tree == i],
-                           fingers$Y[fingers$Tree == i]),
-                     ncol=2)
-      final[[i]] <- list(centers = c(centers$X[i],centers$Y[i]),
-                         fingers = temp)
-      fmat[[i]] <- list(centers = c(centers$X[i],centers$Y[i]),
-                        x = temp[,1], y = temp[,2])
-    }
+    win <- final$window
+    R_clusters <- final$R_clusters
+    R_centers <- final$R_centers
+    suff.mcmc <- final$suffMCMC
+    J <- nrow(suff.mcmc)
+    centeredAt <- tail(model$parameters, 1)
+    beta.p  <- centeredAt[,"beta"]
+    phi.p   <- centeredAt[,"phi"]
+    gamma.p <- centeredAt[,"gamma"]
+    sigma.p <- centeredAt[,"sigma"]
+    kappa.p <- centeredAt[,"kappa"]
+
+    # Gonna need:
+    #
+
   } else {
-    stop("Provide data (from rmat3 object) or a link to centers/fingers.")
+
+    GeyerThompson <- match.arg(GeyerThompson)
+
+    if(!is.na(final[1])){
+      fmat <- lapply(final, function(x) list(centers = x$centers, x = x$fingers[,1], y = x$fingers[,2]))
+    } else if(!is.null(fname)) {
+      centers <- read.table(fname[1])
+      fingers <- read.table(fname[2])
+      fmat <- vector("list", length(centers$Tree))
+      final <- vector("list", length(centers$Tree))
+      for (i in 1:length(centers$Tree)) {
+        temp <- matrix(cbind(fingers$X[fingers$Tree == i],
+                             fingers$Y[fingers$Tree == i]),
+                       ncol=2)
+        final[[i]] <- list(centers = c(centers$X[i],centers$Y[i]),
+                           fingers = temp)
+        fmat[[i]] <- list(centers = c(centers$X[i],centers$Y[i]),
+                          x = temp[,1], y = temp[,2])
+      }
+    } else {
+      stop("Provide data (from rmat3 object) or a link to centers/fingers.")
+    }
+
+    # Preparation
+
+    a1 <- win$x[1]
+    a2 <- win$x[2]
+    b1 <- win$y[1]
+    b2 <- win$y[2]
+    limx <- c(a1, a2)
+    limy <- c(b1, b2)
+
+    suff.beta.phi <- sufficientStat(final, Rc = R_centers)
+
+    Ln <- length(fmat)
+    n.j <- sapply(fmat, function(x) length(x$x))
+
+    up.0 <- rep(0, Ln)
+    angles <- NULL
+    for (ij in 1:length(fmat)){
+      temp <- atan2(fmat[[ij]]$y-fmat[[ij]]$centers[2],
+                    fmat[[ij]]$x-fmat[[ij]]$centers[1])
+      temp[temp < 0] <- 2*pi + temp[temp < 0]
+      up.0[ij] <- mean(circular(temp, modulo = "2pi"))
+      angles <- c(angles, circular(temp - up.0[ij])) # Non-circular, mean 0
+    }
+
+    gamma.p <- initialValues$iniGamma(fmat)
+    beta.p  <- initialValues$iniBeta(fmat, win)
+    phi.p   <- initialValues$iniPhi()
+    kappa.p <- initialValues$iniKappa(angles)
+    sigma.p <- initialValues$iniSigma(fmat)
+
+    theta.fixo <- log(c(beta.p, phi.p))
+
+    suff.mcmc <- switch(GeyerThompson,
+                        large = if(as.numeric(psi[2]) == 1){
+                          sampleZ1s(psi[1], psi[2], psi[3],
+                                    psi[4], psi[5],
+                                    win, J*100, R_centers, R_clusters,
+                                    debug = TRUE)
+                        } else {
+                          sampleZ1(psi[1], psi[2], psi[3],
+                                   psi[4], psi[5],
+                                   win, J*100, R_centers, R_clusters,
+                                   debug = TRUE)
+                        },
+                        importance = if(as.numeric(psi[2]) == 1){
+                          sampleZ1s(psi[1], psi[2], psi[3],
+                                    psi[4], psi[5],
+                                    win, J, R_centers, R_clusters,
+                                    debug = TRUE)
+                        } else {
+                          sampleZ1(psi[1], psi[2], psi[3],
+                                   psi[4], psi[5],
+                                   win, J, R_centers, R_clusters,
+                                   debug = TRUE)
+                        },
+                        simple = sampleZ1(psi[1], psi[2], psi[3],
+                                          psi[4], psi[5],
+                                          win, J, R_centers, R_clusters,
+                                          debug = TRUE)
+    )
+
+    fmat.cond <- sampleThin(fmat, psi[3], psi[5],
+                            psi[4], win, R_clusters, up.0)
+
   }
-
-  # Preparation
-
-  a1 <- win$x[1]
-  a2 <- win$x[2]
-  b1 <- win$y[1]
-  b2 <- win$y[2]
-  limx <- c(a1, a2)
-  limy <- c(b1, b2)
-
-  suff.beta.phi <- sufficientStat(final, Rc = R_centers)
-
-  Ln <- length(fmat)
-  n.j <- sapply(fmat, function(x) length(x$x))
-
-  up.0 <- rep(0, Ln)
-  angles <- NULL
-  for (ij in 1:length(fmat)){
-    temp <- atan2(fmat[[ij]]$y-fmat[[ij]]$centers[2],
-                  fmat[[ij]]$x-fmat[[ij]]$centers[1])
-    temp[temp < 0] <- 2*pi + temp[temp < 0]
-    up.0[ij] <- mean(circular(temp, modulo = "2pi"))
-    angles <- c(angles, circular(temp - up.0[ij])) # Non-circular, mean 0
-  }
-
-  gamma.p <- initialValues$iniGamma(fmat)
-  beta.p  <- initialValues$iniBeta(fmat, win)
-  phi.p   <- initialValues$iniPhi()
-  kappa.p <- initialValues$iniKappa(angles)
-  sigma.p <- initialValues$iniSigma(fmat)
-
-  theta.fixo <- log(c(beta.p, phi.p))
-
-  suff.mcmc <- switch(GeyerThompson,
-                      large = if(as.numeric(psi[2]) == 1){
-                        sampleZ1s(psi[1], psi[2], psi[3],
-                                  psi[4], psi[5],
-                                  win, J*100, R_centers, R_clusters,
-                                  debug = TRUE)
-                      } else {
-                        sampleZ1(psi[1], psi[2], psi[3],
-                                 psi[4], psi[5],
-                                 win, J*100, R_centers, R_clusters,
-                                 debug = TRUE)
-                      },
-                      importance = if(as.numeric(psi[2]) == 1){
-                        sampleZ1s(psi[1], psi[2], psi[3],
-                                  psi[4], psi[5],
-                                  win, J, R_centers, R_clusters,
-                                  debug = TRUE)
-                      } else {
-                        sampleZ1(psi[1], psi[2], psi[3],
-                                 psi[4], psi[5],
-                                 win, J, R_centers, R_clusters,
-                                 debug = TRUE)
-                      },
-                      simple = sampleZ1(psi[1], psi[2], psi[3],
-                                        psi[4], psi[5],
-                                        win, J, R_centers, R_clusters,
-                                        debug = TRUE)
-  )
-
-  fmat.cond <- sampleThin(fmat, psi[3], psi[5],
-                          psi[4], win, R_clusters, up.0)
-
-  # png("estimationZ1.png")
-  layout(matrix(1:2, ncol=2))
-  barplot(table(suff.mcmc[,1]), main = "suff.stat1")
-  abline(v = which(suff.beta.phi[1] == as.numeric(names(table(suff.mcmc[,1])))), col="Red")
-  barplot(table(suff.mcmc[,2]), main = "suff.stat2")
-  abline(v = which(suff.beta.phi[2] == as.numeric(names(table(suff.mcmc[,2])))), col="Red")
-  # dev.off()
 
   #!# DEBUG FROM HERE #!#
 

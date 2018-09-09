@@ -8,8 +8,8 @@ fitmat3(mat3, fname = c("centers.txt", "fingers.txt"), win = owin(c(0, 1),
   c(0, 1)), R_clusters = 0.005, R_centers = 0.02, L = 10000, N = 10000,
   J = 100, seed = NULL, resultsName = NULL, logPriors = preparePriors(),
   initialValues = pickInitialValues(), GeyerThompson = c("large",
-  "resample", "importance", "simple"), candidateVar = c(0.1, 0.1, 0.1, 0.1,
-  0.1), ...)
+  "resample", "importance", "simple"), candidateVar = c(0.1, 0.2, 0.1, 0.1,
+  0.1), verbose = TRUE, ...)
 }
 \arguments{
 \item{mat3}{A mat3 object, see \code{\link{rmat3}}. If reading from a data file,
@@ -62,7 +62,11 @@ step in the computation of the likelihood. The "large" option produces J*100
 samples from which the Geyer-Thompson approximation ot the likelihood is
 built; "importance" uses J samples, but they are updated at every 100
 iterations. "simple" works like "importance", but sets phi = 1. "Resample"
-uses a resample method on existing finger configurations.}
+uses a resample method on existing finger}
+
+\item{candidateVar}{Variability of MCMC candidate selection step, if tuning is necessary.}
+
+\item{verbose}{Prints acceptance rates for candidates. Defaults to TRUE.}
 
 \item{...}{further arguments passed to \code{\link{read.table}}.}
 }
@@ -78,7 +82,7 @@ set.seed(1234)
 x <- rmat3(70, 2, 5, 0.05, 3)
 plot(x)
 # Changing default sampling sizes to make it run fast
-model <- fitmat3(x, L = 99, N = 1000, J = 40, seed = 1234)
+model <- fitmat3(x, L = 100, N = 1000, J = 2, seed = 1234)
 burnin <- 20
 layout(matrix(c(1:5,0), ncol=2))
 plot(model$parameters[-c(1:burnin),1], type="l", ylab="beta")
@@ -92,7 +96,7 @@ abline(h = median(model$parameters[-c(1:burnin),3]))
 abline(h = 20, col = "Red")
 plot(model$parameters[-c(1:burnin),4], type="l", ylab="sigma")
 abline(h = median(model$parameters[-c(1:burnin),4]))
-abline(h = 0.025, col = "Red")
+abline(h = 0.05, col = "Red")
 plot(model$parameters[-c(1:burnin),5], type="l", ylab="kappa")
 abline(h = median(model$parameters[-c(1:burnin),5]))
 abline(h = 3, col = "Red")
