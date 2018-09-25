@@ -317,7 +317,8 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
       beta[l] <- beta[l-1]
     }
 
-    p.mass <- pnorm(1, log(phi[l-1]), candidateVar[2])
+    # https://stats.stackexchange.com/questions/178226/do-sampling-methods-mcmc-smc-work-for-combination-of-continuous-and-discrete-r
+    p.mass <- 0.2 # pnorm(1, log(phi[l-1]), candidateVar[2])
     if(runif(1) < p.mass){
       phi.tent <- 1
     } else {
