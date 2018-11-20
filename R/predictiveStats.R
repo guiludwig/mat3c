@@ -77,8 +77,8 @@ predictiveStats <- function(model, fname = NULL, whichSamples, additionalArgs = 
     suff0[i, ] <- sufficientStat(x, R_c)
     n.fingers0[i] <- mean(sapply(x, function(x) nrow(x$fingers)))
     s.fingers0[i] <- sd(sapply(x, function(x) nrow(x$fingers)))
-    mchull0[i] <- mean(sapply(x, function(x) areahull(cbind(x$x, x$y))))
-    spangle0[i] <- mean(sapply(fmat.cond, spanAngle))
+    mchull0[i] <- mean(sapply(x, function(x) areahull(x$fingers)))
+    spangle0[i] <- mean(sapply(x, spanAngle))
   }
   suff0[,2] <- -1*suff0[,2]
   psuff1 <- sum(suff[1] < suff0[,1])/M
