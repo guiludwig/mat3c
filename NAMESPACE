@@ -2,6 +2,7 @@
 
 S3method(plot,mat3)
 export(fitmat3)
+export(fitnullmat3)
 export(pickInitialValues)
 export(plotLikelihood)
 export(plotResampledShadow)

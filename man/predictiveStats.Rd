@@ -4,8 +4,8 @@
 \alias{predictiveStats}
 \title{Predictive Analysis for a fitmat3 object}
 \usage{
-predictiveStats(model, fname = NULL, whichSamples, additionalArgs = list(win
-  = owin(), R = 0.005, R_c = 0.02), ...)
+predictiveStats(model, fname = NULL, whichSamples,
+  additionalArgs = list(win = owin(), R = 0.005, R_c = 0.02), ...)
 }
 \arguments{
 \item{model}{An fitmat3 object (resulting from a call to fitmat3)}
