@@ -177,11 +177,11 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
 
   # fmat.cond <- sampleThin(fmat, gamma[1], kappa[1], sigma[1], win, R_clusters, up.0)
 
-  z3 <- sum(sapply(final, function(x) length(x$x)))
+  z3 <- sum(sapply(final, function(x) nrow(x$fingers)))
   z5 <- 0
   for(i in 1:length(final)){
-    z1 <- final[[i]]$x - final[[i]]$centers[1]
-    z2 <- final[[i]]$y - final[[i]]$centers[2]
+    z1 <- final[[i]]$fingers[,1] - final[[i]]$centers[1]
+    z2 <- final[[i]]$fingers[,2] - final[[i]]$centers[2]
     radius <- z1^2 + z2^2
     angle <- atan2(z2, z1)
     angle[angle < 0] <- 2*pi + angle[angle < 0] # atan2 -> [-pi,pi] but we sample u on [0, 2pi]
@@ -214,8 +214,8 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
   # posterioriSigma
   z5 <- 0
   for(i in 1:length(final)){
-    z1 <- final[[i]]$x - final[[i]]$centers[1]
-    z2 <- final[[i]]$y - final[[i]]$centers[2]
+    z1 <- final[[i]]$fingers[,1] - final[[i]]$centers[1]
+    z2 <- final[[i]]$fingers[,2] - final[[i]]$centers[2]
     radius <- z1^2 + z2^2
     angle <- atan2(z2, z1)
     angle[angle < 0] <- 2*pi + angle[angle < 0] # atan2 -> [-pi,pi] but we sample u on [0, 2pi]
@@ -229,8 +229,8 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
   # posterioriKappa
   z5 <- 0
   for(i in 1:length(final)){
-    z1 <- final[[i]]$x - final[[i]]$centers[1]
-    z2 <- final[[i]]$y - final[[i]]$centers[2]
+    z1 <- final[[i]]$fingers[,1] - final[[i]]$centers[1]
+    z2 <- final[[i]]$fingers[,2] - final[[i]]$centers[2]
     radius <- z1^2 + z2^2
     angle <- atan2(z2, z1)
     angle[angle < 0] <- 2*pi + angle[angle < 0] # atan2 -> [-pi,pi] but we sample u on [0, 2pi]
@@ -265,11 +265,11 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
     }
 
 
-    z3 <- sum(sapply(final, function(x) length(x$x)))
+    z3 <- sum(sapply(final, function(x) nrow(x$fingers)))
     z5 <- 0
     for(i in 1:length(final)){
-      z1 <- final[[i]]$x - final[[i]]$centers[1]
-      z2 <- final[[i]]$y - final[[i]]$centers[2]
+      z1 <- final[[i]]$fingers[,1] - final[[i]]$centers[1]
+      z2 <- final[[i]]$fingers[,2] - final[[i]]$centers[2]
       radius <- z1^2 + z2^2
       angle <- atan2(z2, z1)
       angle[angle < 0] <- 2*pi + angle[angle < 0] # atan2 -> [-pi,pi] but we sample u on [0, 2pi]
@@ -345,8 +345,8 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
 
     z5 <- 0
     for(i in 1:length(final)){
-      z1 <- final[[i]]$x - final[[i]]$centers[1]
-      z2 <- final[[i]]$y - final[[i]]$centers[2]
+      z1 <- final[[i]]$fingers[,1] - final[[i]]$centers[1]
+      z2 <- final[[i]]$fingers[,2] - final[[i]]$centers[2]
       radius <- z1^2 + z2^2
       angle <- atan2(z2, z1)
       angle[angle < 0] <- 2*pi + angle[angle < 0] # atan2 -> [-pi,pi] but we sample u on [0, 2pi]
@@ -358,8 +358,8 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
     prob1 <- prob1 + logPriors$priorSigma(sigma.tent, sigma.p)
     z5 <- 0
     for(i in 1:length(final)){
-      z1 <- final[[i]]$x - final[[i]]$centers[1]
-      z2 <- final[[i]]$y - final[[i]]$centers[2]
+      z1 <- final[[i]]$fingers[,1] - final[[i]]$centers[1]
+      z2 <- final[[i]]$fingers[,2] - final[[i]]$centers[2]
       radius <- z1^2 + z2^2
       angle <- atan2(z2, z1)
       angle[angle < 0] <- 2*pi + angle[angle < 0] # atan2 -> [-pi,pi] but we sample u on [0, 2pi]
@@ -388,8 +388,8 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
 
     z5 <- 0
     for(i in 1:length(final)){
-      z1 <- final[[i]]$x - final[[i]]$centers[1]
-      z2 <- final[[i]]$y - final[[i]]$centers[2]
+      z1 <- final[[i]]$fingers[,1] - final[[i]]$centers[1]
+      z2 <- final[[i]]$fingers[,2] - final[[i]]$centers[2]
       radius <- z1^2 + z2^2
       angle <- atan2(z2, z1)
       angle[angle < 0] <- 2*pi + angle[angle < 0] # atan2 -> [-pi,pi] but we sample u on [0, 2pi]
@@ -402,8 +402,8 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
 
     z5 <- 0
     for(i in 1:length(final)){
-      z1 <- final[[i]]$x - final[[i]]$centers[1]
-      z2 <- final[[i]]$y - final[[i]]$centers[2]
+      z1 <- final[[i]]$fingers[,1] - final[[i]]$centers[1]
+      z2 <- final[[i]]$fingers[,2] - final[[i]]$centers[2]
       radius <- z1^2 + z2^2
       angle <- atan2(z2, z1)
       angle[angle < 0] <- 2*pi + angle[angle < 0] # atan2 -> [-pi,pi] but we sample u on [0, 2pi]
