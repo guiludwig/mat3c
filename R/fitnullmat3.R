@@ -218,9 +218,18 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
     z2 <- final[[i]]$fingers[,2] - final[[i]]$centers[2]
     radius <- z1^2 + z2^2
     angle <- atan2(z2, z1)
-    angle[angle < 0] <- 2*pi + angle[angle < 0] # atan2 -> [-pi,pi] but we sample u on [0, 2pi]
-    z5 <- sum(outer(circular:::DvonmisesRad(seq(0, 2*pi - pi/20, pi/20), runif(1, 0, 2*pi), kappa[1]),
-                    dnorm(seq(-3,3,.1)*sigma[1], 0, sigma[1])))*(pi/20)*.1*sigma[1]
+    angle[angle < 0] <- 2*pi + angle[angle < 0]
+    direction <- mean(circular(angle, modulo = "2pi"))
+    X.st <- rnorm(10000, 0, 1)
+    temp1 <- circular:::RvonmisesRad(10000, direction, kappa[1])
+    X <- cbind(final[[i]]$centers[1] + sigma[1]*abs(X.st)*cos(temp1),
+               final[[i]]$centers[2] + sigma[1]*abs(X.st)*sin(temp1))
+    d.s.1 <- !(X[, 1] > a1 & X[, 1] < a2 & X[, 2] > b1 & X[, 2] < b2)
+    n.s.1 <- sum(d.s.1)
+    prob.tot <- 1 - n.s.1/10000
+    z5 <- z5 + sum(circular:::DvonmisesRad(angle, direction, kappa[1], log = TRUE)
+                   + 0.5*(log(2/pi) + log(radius)) - log(sigma[1]) - 0.5*radius/(sigma[1]^2) -
+                     log(prob.tot))
   }
   suff.all <- c(length(final), 0, z3, 0, z5)
   prob0sigma <- -gamma[1]*suff.all[1] + log(gamma[1])*suff.all[3] + suff.all[5] - suff.all[1]*log(1 - exp(-gamma[1]))
@@ -233,9 +242,18 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
     z2 <- final[[i]]$fingers[,2] - final[[i]]$centers[2]
     radius <- z1^2 + z2^2
     angle <- atan2(z2, z1)
-    angle[angle < 0] <- 2*pi + angle[angle < 0] # atan2 -> [-pi,pi] but we sample u on [0, 2pi]
-    z5 <- sum(outer(circular:::DvonmisesRad(seq(0, 2*pi - pi/20, pi/20), runif(1, 0, 2*pi), kappa[1]),
-                    dnorm(seq(-3,3,.1)*sigma[1], 0, sigma[1])))*(pi/20)*.1*sigma[1]
+    angle[angle < 0] <- 2*pi + angle[angle < 0]
+    direction <- mean(circular(angle, modulo = "2pi"))
+    X.st <- rnorm(10000, 0, 1)
+    temp1 <- circular:::RvonmisesRad(10000, direction, kappa[1])
+    X <- cbind(final[[i]]$centers[1] + sigma[1]*abs(X.st)*cos(temp1),
+               final[[i]]$centers[2] + sigma[1]*abs(X.st)*sin(temp1))
+    d.s.1 <- !(X[, 1] > a1 & X[, 1] < a2 & X[, 2] > b1 & X[, 2] < b2)
+    n.s.1 <- sum(d.s.1)
+    prob.tot <- 1 - n.s.1/10000
+    z5 <- z5 + sum(circular:::DvonmisesRad(angle, direction, kappa[1], log = TRUE)
+                   + 0.5*(log(2/pi) + log(radius)) - log(sigma[1]) - 0.5*radius/(sigma[1]^2) -
+                     log(prob.tot))
   }
   suff.all <- c(length(final), 0, z3, 0, z5)
   prob0kappa <- -gamma[1]*suff.all[1] + log(gamma[1])*suff.all[3] + suff.all[5] - suff.all[1]*log(1 - exp(-gamma[1]))
@@ -272,9 +290,18 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
       z2 <- final[[i]]$fingers[,2] - final[[i]]$centers[2]
       radius <- z1^2 + z2^2
       angle <- atan2(z2, z1)
-      angle[angle < 0] <- 2*pi + angle[angle < 0] # atan2 -> [-pi,pi] but we sample u on [0, 2pi]
-      z5 <- sum(outer(circular:::DvonmisesRad(seq(0, 2*pi - pi/20, pi/20), runif(1, 0, 2*pi), kappa[l-1]),
-                      dnorm(seq(-3,3,.1)*sigma[l-1], 0, sigma[l-1])))*(pi/20)*.1*sigma[l-1]
+      angle[angle < 0] <- 2*pi + angle[angle < 0]
+      direction <- mean(circular(angle, modulo = "2pi"))
+      X.st <- rnorm(10000, 0, 1)
+      temp1 <- circular:::RvonmisesRad(10000, direction, kappa[l-1])
+      X <- cbind(final[[i]]$centers[1] + sigma[l-1]*abs(X.st)*cos(temp1),
+                 final[[i]]$centers[2] + sigma[l-1]*abs(X.st)*sin(temp1))
+      d.s.1 <- !(X[, 1] > a1 & X[, 1] < a2 & X[, 2] > b1 & X[, 2] < b2)
+      n.s.1 <- sum(d.s.1)
+      prob.tot <- 1 - n.s.1/10000
+      z5 <- z5 + sum(circular:::DvonmisesRad(angle, direction, kappa[l-1], log = TRUE)
+                     + 0.5*(log(2/pi) + log(radius)) - log(sigma[l-1]) - 0.5*radius/(sigma[l-1]^2) -
+                       log(prob.tot))
     }
     suff.all <- c(length(final), 0, z3, 0, z5)
 
@@ -340,18 +367,25 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
     }
 
     # sigma
-
     sigma.tent <- exp(rnorm(1, log(sigma[l-1]), candidateVar[4]))
-
     z5 <- 0
     for(i in 1:length(final)){
       z1 <- final[[i]]$fingers[,1] - final[[i]]$centers[1]
       z2 <- final[[i]]$fingers[,2] - final[[i]]$centers[2]
       radius <- z1^2 + z2^2
       angle <- atan2(z2, z1)
-      angle[angle < 0] <- 2*pi + angle[angle < 0] # atan2 -> [-pi,pi] but we sample u on [0, 2pi]
-      z5 <- sum(outer(circular:::DvonmisesRad(seq(0, 2*pi - pi/20, pi/20), runif(1, 0, 2*pi), kappa[l-1]),
-                      dnorm(seq(-3,3,.1)*sigma.tent, 0, sigma.tent)))*(pi/20)*.1*sigma.tent
+      angle[angle < 0] <- 2*pi + angle[angle < 0]
+      direction <- mean(circular(angle, modulo = "2pi"))
+      X.st <- rnorm(10000, 0, 1)
+      temp1 <- circular:::RvonmisesRad(10000, direction, kappa[l-1])
+      X <- cbind(final[[i]]$centers[1] + sigma.tent*abs(X.st)*cos(temp1),
+                 final[[i]]$centers[2] + sigma.tent*abs(X.st)*sin(temp1))
+      d.s.1 <- !(X[, 1] > a1 & X[, 1] < a2 & X[, 2] > b1 & X[, 2] < b2)
+      n.s.1 <- sum(d.s.1)
+      prob.tot <- 1 - n.s.1/10000
+      z5 <- z5 + sum(circular:::DvonmisesRad(angle, direction, kappa[l-1], log = TRUE)
+                     + 0.5*(log(2/pi) + log(radius)) - log(sigma.tent) - 0.5*radius/(sigma.tent^2) -
+                       log(prob.tot))
     }
     suff.all <- c(length(final), 0, z3, 0, z5)
     prob1 <- -gamma[l]*suff.all[1] + log(gamma[l])*suff.all[3] + suff.all[5] - suff.all[1]*log(1 - exp(-gamma[l]))
@@ -362,9 +396,18 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
       z2 <- final[[i]]$fingers[,2] - final[[i]]$centers[2]
       radius <- z1^2 + z2^2
       angle <- atan2(z2, z1)
-      angle[angle < 0] <- 2*pi + angle[angle < 0] # atan2 -> [-pi,pi] but we sample u on [0, 2pi]
-      z5 <- sum(outer(circular:::DvonmisesRad(seq(0, 2*pi - pi/20, pi/20), runif(1, 0, 2*pi), kappa[l-1]),
-                      dnorm(seq(-3,3,.1)*sigma[l-1], 0, sigma[l-1])))*(pi/20)*.1*sigma[l-1]
+      angle[angle < 0] <- 2*pi + angle[angle < 0]
+      direction <- mean(circular(angle, modulo = "2pi"))
+      X.st <- rnorm(10000, 0, 1)
+      temp1 <- circular:::RvonmisesRad(10000, direction, kappa[l-1])
+      X <- cbind(final[[i]]$centers[1] + sigma[l-1]*abs(X.st)*cos(temp1),
+                 final[[i]]$centers[2] + sigma[l-1]*abs(X.st)*sin(temp1))
+      d.s.1 <- !(X[, 1] > a1 & X[, 1] < a2 & X[, 2] > b1 & X[, 2] < b2)
+      n.s.1 <- sum(d.s.1)
+      prob.tot <- 1 - n.s.1/10000
+      z5 <- z5 + sum(circular:::DvonmisesRad(angle, direction, kappa[l-1], log = TRUE)
+                     + 0.5*(log(2/pi) + log(radius)) - log(sigma[l-1]) - 0.5*radius/(sigma[l-1]^2) -
+                       log(prob.tot))
     }
     suff.all <- c(length(final), 0, z3, 0, z5)
     prob0sigma <- -gamma[l]*suff.all[1] + log(gamma[l])*suff.all[3] + suff.all[5] - suff.all[1]*log(1 - exp(-gamma[l]))
@@ -383,18 +426,25 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
     }
 
     # posterioriKappa
-
     kappa.tent <- exp(rnorm(1, log(kappa[l-1]), candidateVar[5]))
-
     z5 <- 0
     for(i in 1:length(final)){
       z1 <- final[[i]]$fingers[,1] - final[[i]]$centers[1]
       z2 <- final[[i]]$fingers[,2] - final[[i]]$centers[2]
       radius <- z1^2 + z2^2
       angle <- atan2(z2, z1)
-      angle[angle < 0] <- 2*pi + angle[angle < 0] # atan2 -> [-pi,pi] but we sample u on [0, 2pi]
-      z5 <- sum(outer(circular:::DvonmisesRad(seq(0, 2*pi - pi/20, pi/20), runif(1, 0, 2*pi), kappa[l-1]),
-                      dnorm(seq(-3,3,.1)*sigma[l], 0, sigma[l])))*(pi/20)*.1*sigma[l]
+      angle[angle < 0] <- 2*pi + angle[angle < 0]
+      direction <- mean(circular(angle, modulo = "2pi"))
+      X.st <- rnorm(10000, 0, 1)
+      temp1 <- circular:::RvonmisesRad(10000, direction, kappa.tent)
+      X <- cbind(final[[i]]$centers[1] + sigma[l]*abs(X.st)*cos(temp1),
+                 final[[i]]$centers[2] + sigma[l]*abs(X.st)*sin(temp1))
+      d.s.1 <- !(X[, 1] > a1 & X[, 1] < a2 & X[, 2] > b1 & X[, 2] < b2)
+      n.s.1 <- sum(d.s.1)
+      prob.tot <- 1 - n.s.1/10000
+      z5 <- z5 + sum(circular:::DvonmisesRad(angle, direction, kappa.tent, log = TRUE)
+                     + 0.5*(log(2/pi) + log(radius)) - log(sigma[l]) - 0.5*radius/(sigma[l]^2) -
+                       log(prob.tot))
     }
     suff.all <- c(length(final), 0, z3, 0, z5)
     prob0kappa <- -gamma[l]*suff.all[1] + log(gamma[l])*suff.all[3] + suff.all[5] - suff.all[1]*log(1 - exp(-gamma[l]))
@@ -406,9 +456,18 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
       z2 <- final[[i]]$fingers[,2] - final[[i]]$centers[2]
       radius <- z1^2 + z2^2
       angle <- atan2(z2, z1)
-      angle[angle < 0] <- 2*pi + angle[angle < 0] # atan2 -> [-pi,pi] but we sample u on [0, 2pi]
-      z5 <- sum(outer(circular:::DvonmisesRad(seq(0, 2*pi - pi/20, pi/20), runif(1, 0, 2*pi), kappa.tent),
-                      dnorm(seq(-3,3,.1)*sigma[l], 0, sigma[l])))*(pi/20)*.1*sigma[l]
+      angle[angle < 0] <- 2*pi + angle[angle < 0]
+      direction <- mean(circular(angle, modulo = "2pi"))
+      X.st <- rnorm(10000, 0, 1)
+      temp1 <- circular:::RvonmisesRad(10000, direction, kappa[l-1])
+      X <- cbind(final[[i]]$centers[1] + sigma[l]*abs(X.st)*cos(temp1),
+                 final[[i]]$centers[2] + sigma[l]*abs(X.st)*sin(temp1))
+      d.s.1 <- !(X[, 1] > a1 & X[, 1] < a2 & X[, 2] > b1 & X[, 2] < b2)
+      n.s.1 <- sum(d.s.1)
+      prob.tot <- 1 - n.s.1/10000
+      z5 <- z5 + sum(circular:::DvonmisesRad(angle, direction, kappa[l-1], log = TRUE)
+                     + 0.5*(log(2/pi) + log(radius)) - log(sigma[l]) - 0.5*radius/(sigma[l]^2) -
+                       log(prob.tot))
     }
     suff.all <- c(length(final), 0, z3, 0, z5)
     prob1 <- -gamma[l]*suff.all[1] + log(gamma[l])*suff.all[3] + suff.all[5] - suff.all[1]*log(1 - exp(-gamma[l]))
