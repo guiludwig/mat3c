@@ -4,12 +4,11 @@
 \alias{plotLikelihood}
 \title{Plot likelihood function}
 \usage{
-plotLikelihood(final, psi = c(beta = 70, phi = 2, gamma = 5, sigma =
-  0.05, kappa = 3), win = owin(c(0, 1), c(0, 1)), R_clusters = 0.02,
-  R_centers = 0.05, J = 100, N = 10000,
-  logPriors = preparePriors(), initialValues = pickInitialValues(),
-  GeyerThompson = c("large", "importance", "simple"), fname = NULL,
-  logv = TRUE)
+plotLikelihood(final, psi = c(beta = 70, phi = 2, gamma = 5, sigma = 0.05,
+  kappa = 3), win = owin(c(0, 1), c(0, 1)), R_clusters = 0.02,
+  R_centers = 0.05, J = 100, N = 10000, logPriors = preparePriors(),
+  initialValues = pickInitialValues(), GeyerThompson = c("large",
+  "importance", "simple"), fname = NULL, logv = TRUE)
 }
 \arguments{
 \item{final}{...}

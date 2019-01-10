@@ -4,12 +4,10 @@
 \alias{fitnullmat3}
 \title{Fit a Poisson marked point process model via MCMC sampling}
 \usage{
-fitnullmat3(mat3, fname = c("centers.txt", "fingers.txt"),
-  win = owin(c(0, 1), c(0, 1)), L = 10000, J = 100, seed = NULL,
-  resultsName = NULL, logPriors = preparePriors(),
-  initialValues = pickInitialValues(), GeyerThompson = c("large",
-  "resample", "importance", "simple"), candidateVar = c(0.1, 0.2, 0.1,
-  0.1, 0.1), verbose = TRUE, ...)
+fitnullmat3(mat3, fname = c("centers.txt", "fingers.txt"), win = owin(c(0,
+  1), c(0, 1)), L = 10000, NN = 2000, seed = NULL, resultsName = NULL,
+  logPriors = preparePriors(), initialValues = pickInitialValues(),
+  candidateVar = c(0.1, 0.2, 0.1, 0.1, 0.1), verbose = TRUE, ...)
 }
 \arguments{
 \item{mat3}{A mat3 object, see \code{\link{rmat3}}. If reading from a data file,
@@ -27,10 +25,7 @@ Defaults to the unit square.}
 
 \item{L}{Number of samples for the MCMC sampler. Defaults to 10000.}
 
-\item{J}{Number of updates for the Geyer-Thompson step in estimating the sampling
-distribution for beta and phi (if GeyerThompson is set to "large", 100 times J).
-Defaults to 100 for "simple" and "importance" options in GeyerThompson,
-and 10000 for "large".}
+\item{NN}{Number of samples to Monte-Carlo estimation of constant. Defaults to 2000.}
 
 \item{seed}{Fixes the RNG seed for replication. Defaults to NULL, which does not
 fix the seed.}
@@ -45,13 +40,6 @@ produces the default values of logPriors.}
 \item{initialValues}{Some holistic initial values for empirical priors on the parameters.
 See \code{\link{pickInitialValues}}, which produces the default values of
 initialValues.}
-
-\item{GeyerThompson}{Provides different methods for updating the Geyer and Thompson (1999)
-step in the computation of the likelihood. The "large" option produces J*100
-samples from which the Geyer-Thompson approximation ot the likelihood is
-built; "importance" uses J samples, but they are updated at every 100
-iterations. "simple" works like "importance", but sets phi = 1. "Resample"
-uses a resample method on existing finger}
 
 \item{candidateVar}{Variability of MCMC candidate selection step, if tuning is necessary.}
 
@@ -71,7 +59,7 @@ set.seed(1234)
 x <- rmat3(70, 2, 5, 0.05, 3)
 plot(x)
 # Changing default sampling sizes to make it run fast
-model <- fitnullmat3(x, L = 100, J = 2, seed = 1234)
+model <- fitnullmat3(x, L = 100, seed = 1234)
 
 }
 \references{

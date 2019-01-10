@@ -13,10 +13,7 @@
 #' @param win Square window in which the process is to be sampled. See \code{\link{owin}}.
 #'              Defaults to the unit square.
 #' @param L Number of samples for the MCMC sampler. Defaults to 10000.
-#' @param J Number of updates for the Geyer-Thompson step in estimating the sampling
-#'              distribution for beta and phi (if GeyerThompson is set to "large", 100 times J).
-#'              Defaults to 100 for "simple" and "importance" options in GeyerThompson,
-#'              and 10000 for "large".
+#' @param NN Number of samples to Monte-Carlo estimation of constant. Defaults to 2000.
 #' @param seed Fixes the RNG seed for replication. Defaults to NULL, which does not
 #'              fix the seed.
 #' @param resultsName Writes the results to a file; defaults to NULL, which does not
@@ -27,12 +24,6 @@
 #' @param initialValues Some holistic initial values for empirical priors on the parameters.
 #'              See \code{\link{pickInitialValues}}, which produces the default values of
 #'              initialValues.
-#' @param GeyerThompson Provides different methods for updating the Geyer and Thompson (1999)
-#'              step in the computation of the likelihood. The "large" option produces J*100
-#'              samples from which the Geyer-Thompson approximation ot the likelihood is
-#'              built; "importance" uses J samples, but they are updated at every 100
-#'              iterations. "simple" works like "importance", but sets phi = 1. "Resample"
-#'              uses a resample method on existing finger
 #' @param candidateVar Variability of MCMC candidate selection step, if tuning is necessary.
 #' @param verbose Prints acceptance rates for candidates. Defaults to TRUE.
 #' @param ... further arguments passed to \code{\link{read.table}}.
@@ -49,7 +40,7 @@
 #' x <- rmat3(70, 2, 5, 0.05, 3)
 #' plot(x)
 #' # Changing default sampling sizes to make it run fast
-#' model <- fitnullmat3(x, L = 100, J = 2, seed = 1234)
+#' model <- fitnullmat3(x, L = 100, seed = 1234)
 #'
 #' @author Guilherme Ludwig and Nancy Garcia
 #'
@@ -66,11 +57,10 @@
 #' @keywords Functional Data Analysis
 fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
                     win = owin(c(0,1), c(0,1)),
-                    L = 10000, J = 100, seed = NULL,
+                    L = 10000, NN = 2000, seed = NULL,
                     resultsName = NULL,
                     logPriors = preparePriors(),
                     initialValues = pickInitialValues(),
-                    GeyerThompson = c("large", "resample", "importance", "simple"),
                     candidateVar = c(0.1, 0.2, 0.1, 0.1, 0.1),
                     verbose = TRUE,
                     ...){
@@ -80,7 +70,6 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
   priornames <- c("priorBeta", "priorPhi", "priorGamma", "priorSigma", "priorKappa")
   stopifnot(all.equal(names(logPriors), priornames))
 
-  GeyerThompson <- match.arg(GeyerThompson)
   if(is.na(mat3[1])){
     centers <- read.table(fname[1], ...)
     fingers <- read.table(fname[2], ...)
@@ -135,31 +124,6 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
 
   theta.fixo <- log(c(beta.p, phi.p))
 
-  # suff.mcmc <- switch(GeyerThompson,
-  #                     large = sampleZ1(beta.p, 1, gamma.p, sigma.p, kappa.p,
-  #                                      win, J*100,
-  #                                      R_centers = 0.05, R_clusters = 0, # Won't matter
-  #                                      debug = TRUE),
-  #                     resample = resampleZ1(beta.p, 1, final,
-  #                                           win, J*100,
-  #                                           R_centers = 0.05, R_clusters = 0, # Won't matter
-  #                                           debug = TRUE),
-  #                     simple = sampleZ1s(beta.p, 1, gamma.p, sigma.p, kappa.p,
-  #                                        win, J,
-  #                                        R_centers = 0.05, R_clusters = 0, # Won't matter
-  #                                        debug = TRUE),
-  #                     importance = sampleZ1(beta.p, 1, gamma.p, sigma.p, kappa.p,
-  #                                           win, J,
-  #                                           R_centers = 0.05, R_clusters = 0, # Won't matter
-  #                                           debug = TRUE))
-  if(GeyerThompson %in% c("large", "resample")){
-    suff.mcmc <- matrix(0, nrow = J*100, ncol = 2)
-    suff.mcmc[,1] <- rpois(J*100, beta.p*area(win))
-  } else {
-    suff.mcmc <- matrix(0, nrow = J, ncol = 2)
-    suff.mcmc[,1] <- rpois(J, beta.p*area(win))
-  }
-
   if(verbose) cat(paste0("l = ",1,"\n"))
 
   # sampled parameters initialization
@@ -185,9 +149,21 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
     radius <- z1^2 + z2^2
     angle <- atan2(z2, z1)
     angle[angle < 0] <- 2*pi + angle[angle < 0] # atan2 -> [-pi,pi] but we sample u on [0, 2pi]
-    z5 <- sum(outer(circular:::DvonmisesRad(seq(0, 2*pi - pi/20, pi/20), runif(1, 0, 2*pi), kappa[1]),
-                    dnorm(seq(-3,3,.1)*sigma[1], 0, sigma[1])))*(pi/20)*.1*sigma[1]
+    direction <- mean(circular(angle, modulo = "2pi"))
+    X.st <- rnorm(NN, 0, 1)
+    temp1 <- circular:::RvonmisesRad(NN, direction, kappa[1])
+    X <- cbind(final[[i]]$centers[1] + sigma[1]*abs(X.st)*cos(temp1),
+               final[[i]]$centers[2] + sigma[1]*abs(X.st)*sin(temp1))
+    d.s.1 <- !(X[, 1] > a1 & X[, 1] < a2 & X[, 2] > b1 & X[, 2] < b2)
+    n.s.1 <- sum(d.s.1)
+    prob.tot <- 1 - n.s.1/NN
+    z5 <- z5 + sum(circular:::DvonmisesRad(angle, direction, kappa[1], log = TRUE)
+                   + 0.5*(log(2/pi) + log(radius)) - log(sigma[1]) - 0.5*radius/(sigma[1]^2) -
+                     log(prob.tot))
+    # z5 <- sum(outer(circular:::DvonmisesRad(seq(0, 2*pi - pi/20, pi/20), runif(1, 0, 2*pi), kappa[1]),
+    #                 dnorm(seq(-3,3,.1)*sigma[1], 0, sigma[1])))*(pi/20)*.1*sigma[1]
   }
+
   suff.all <- c(length(final), 0, z3, 0, z5)
   # suff.all <- sufficientStatAll(fmat.cond, sigma.p, kappa.p,
   #                               A1 = a1, A2 = a2, B1 = b1, B2 = b2,
@@ -195,13 +171,7 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
 
   # posterioriBeta
   theta.prime <- log(c(beta[1], phi[1])) # Candidates
-  part1 <- sum(theta.prime*suff.beta.phi)
-  temp <- numeric(J)
-  for (j in 1:J){
-    temp[j] <- sum((theta.prime-theta.fixo)*suff.mcmc[j, ]) # < theta - psi, T*(N) >
-  }
-  part2 <- mean(exp(temp))
-  prob0beta <- (part1 - log(part2)) - gamma[1]*suff.all[1] + log(gamma[1])*suff.all[3] -
+  prob0beta <- sum(suff.beta.phi*theta.prime) - gamma[1]*suff.all[1] + log(gamma[1])*suff.all[3] -
     suff.all[1]*log(1 - exp(-gamma[1])) + logPriors$priorBeta(beta[1], beta.p)
 
   # posterioriPhi
@@ -220,13 +190,13 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
     angle <- atan2(z2, z1)
     angle[angle < 0] <- 2*pi + angle[angle < 0]
     direction <- mean(circular(angle, modulo = "2pi"))
-    X.st <- rnorm(10000, 0, 1)
-    temp1 <- circular:::RvonmisesRad(10000, direction, kappa[1])
+    X.st <- rnorm(NN, 0, 1)
+    temp1 <- circular:::RvonmisesRad(NN, direction, kappa[1])
     X <- cbind(final[[i]]$centers[1] + sigma[1]*abs(X.st)*cos(temp1),
                final[[i]]$centers[2] + sigma[1]*abs(X.st)*sin(temp1))
     d.s.1 <- !(X[, 1] > a1 & X[, 1] < a2 & X[, 2] > b1 & X[, 2] < b2)
     n.s.1 <- sum(d.s.1)
-    prob.tot <- 1 - n.s.1/10000
+    prob.tot <- 1 - n.s.1/NN
     z5 <- z5 + sum(circular:::DvonmisesRad(angle, direction, kappa[1], log = TRUE)
                    + 0.5*(log(2/pi) + log(radius)) - log(sigma[1]) - 0.5*radius/(sigma[1]^2) -
                      log(prob.tot))
@@ -244,13 +214,13 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
     angle <- atan2(z2, z1)
     angle[angle < 0] <- 2*pi + angle[angle < 0]
     direction <- mean(circular(angle, modulo = "2pi"))
-    X.st <- rnorm(10000, 0, 1)
-    temp1 <- circular:::RvonmisesRad(10000, direction, kappa[1])
+    X.st <- rnorm(NN, 0, 1)
+    temp1 <- circular:::RvonmisesRad(NN, direction, kappa[1])
     X <- cbind(final[[i]]$centers[1] + sigma[1]*abs(X.st)*cos(temp1),
                final[[i]]$centers[2] + sigma[1]*abs(X.st)*sin(temp1))
     d.s.1 <- !(X[, 1] > a1 & X[, 1] < a2 & X[, 2] > b1 & X[, 2] < b2)
     n.s.1 <- sum(d.s.1)
-    prob.tot <- 1 - n.s.1/10000
+    prob.tot <- 1 - n.s.1/NN
     z5 <- z5 + sum(circular:::DvonmisesRad(angle, direction, kappa[1], log = TRUE)
                    + 0.5*(log(2/pi) + log(radius)) - log(sigma[1]) - 0.5*radius/(sigma[1]^2) -
                      log(prob.tot))
@@ -269,20 +239,6 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
 
   for (l in ini:L) {
 
-    if (l %% 100 == 1) {
-      bur <- ifelse(l == 101, 1, 100)
-      censorBeta <- min(median(beta[bur:(l-1)]), beta.p)
-      censorPhi <- min(median(phi[bur:(l-1)]), 5)
-      censorPhi <- max(1/5, censorPhi)
-      theta.fixo <- log(c(censorBeta, censorPhi))
-      suff.mcmc <- switch(GeyerThompson,
-                          large = suff.mcmc, # Mo change
-                          resample = suff.mcmc, # Mo change
-                          simple = cbind(rpois(J, censorBeta*area(win)), 0),
-                          importance = cbind(rpois(J, censorBeta*area(win)), 0))
-    }
-
-
     z3 <- sum(sapply(final, function(x) nrow(x$fingers)))
     z5 <- 0
     for(i in 1:length(final)){
@@ -292,13 +248,13 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
       angle <- atan2(z2, z1)
       angle[angle < 0] <- 2*pi + angle[angle < 0]
       direction <- mean(circular(angle, modulo = "2pi"))
-      X.st <- rnorm(10000, 0, 1)
-      temp1 <- circular:::RvonmisesRad(10000, direction, kappa[l-1])
+      X.st <- rnorm(NN, 0, 1)
+      temp1 <- circular:::RvonmisesRad(NN, direction, kappa[l-1])
       X <- cbind(final[[i]]$centers[1] + sigma[l-1]*abs(X.st)*cos(temp1),
                  final[[i]]$centers[2] + sigma[l-1]*abs(X.st)*sin(temp1))
       d.s.1 <- !(X[, 1] > a1 & X[, 1] < a2 & X[, 2] > b1 & X[, 2] < b2)
       n.s.1 <- sum(d.s.1)
-      prob.tot <- 1 - n.s.1/10000
+      prob.tot <- 1 - n.s.1/NN
       z5 <- z5 + sum(circular:::DvonmisesRad(angle, direction, kappa[l-1], log = TRUE)
                      + 0.5*(log(2/pi) + log(radius)) - log(sigma[l-1]) - 0.5*radius/(sigma[l-1]^2) -
                        log(prob.tot))
@@ -312,23 +268,11 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
     beta.tent <- exp(rnorm(1, log(beta[l-1]), candidateVar[1]))
     # prob1
     theta.prime <- log(c(beta.tent, phi[l-1])) # Candidates
-    part1 <- sum(theta.prime*suff.beta.phi)
-    temp <- numeric(J)
-    for (j in 1:J){
-      temp[j] <- sum((theta.prime-theta.fixo)*suff.mcmc[j, ]) # < theta - psi, T*(N) >
-    }
-    part2 <- mean(exp(temp))
-    prob1 <- (part1 - log(part2)) - gamma[l-1]*suff.all[1] + log(gamma[l-1])*suff.all[3] -
+    prob1 <- sum(suff.beta.phi*theta.prime) - gamma[l-1]*suff.all[1] + log(gamma[l-1])*suff.all[3] -
       suff.all[1]*log(1 - exp(-gamma[l-1])) + logPriors$priorBeta(beta.tent, beta.p)
     # prob0beta
     theta.prime <- log(c(beta[l-1], phi[l-1])) # Candidates
-    part1 <- sum(theta.prime*suff.beta.phi)
-    temp <- numeric(J)
-    for (j in 1:J){
-      temp[j] <- sum((theta.prime-theta.fixo)*suff.mcmc[j, ]) # < theta - psi, T*(N) >
-    }
-    part2 <- mean(exp(temp))
-    prob0beta <- (part1 - log(part2)) - gamma[l-1]*suff.all[1] + log(gamma[l-1])*suff.all[3] -
+    prob0beta <- sum(theta.prime*suff.beta.phi) - gamma[l-1]*suff.all[1] + log(gamma[l-1])*suff.all[3] -
       suff.all[1]*log(1 - exp(-gamma[l-1])) + logPriors$priorBeta(beta[l-1], beta.p)
 
     const <- beta.tent/beta[l-1]
@@ -376,13 +320,13 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
       angle <- atan2(z2, z1)
       angle[angle < 0] <- 2*pi + angle[angle < 0]
       direction <- mean(circular(angle, modulo = "2pi"))
-      X.st <- rnorm(10000, 0, 1)
-      temp1 <- circular:::RvonmisesRad(10000, direction, kappa[l-1])
+      X.st <- rnorm(NN, 0, 1)
+      temp1 <- circular:::RvonmisesRad(NN, direction, kappa[l-1])
       X <- cbind(final[[i]]$centers[1] + sigma.tent*abs(X.st)*cos(temp1),
                  final[[i]]$centers[2] + sigma.tent*abs(X.st)*sin(temp1))
       d.s.1 <- !(X[, 1] > a1 & X[, 1] < a2 & X[, 2] > b1 & X[, 2] < b2)
       n.s.1 <- sum(d.s.1)
-      prob.tot <- 1 - n.s.1/10000
+      prob.tot <- 1 - n.s.1/NN
       z5 <- z5 + sum(circular:::DvonmisesRad(angle, direction, kappa[l-1], log = TRUE)
                      + 0.5*(log(2/pi) + log(radius)) - log(sigma.tent) - 0.5*radius/(sigma.tent^2) -
                        log(prob.tot))
@@ -398,13 +342,13 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
       angle <- atan2(z2, z1)
       angle[angle < 0] <- 2*pi + angle[angle < 0]
       direction <- mean(circular(angle, modulo = "2pi"))
-      X.st <- rnorm(10000, 0, 1)
-      temp1 <- circular:::RvonmisesRad(10000, direction, kappa[l-1])
+      X.st <- rnorm(NN, 0, 1)
+      temp1 <- circular:::RvonmisesRad(NN, direction, kappa[l-1])
       X <- cbind(final[[i]]$centers[1] + sigma[l-1]*abs(X.st)*cos(temp1),
                  final[[i]]$centers[2] + sigma[l-1]*abs(X.st)*sin(temp1))
       d.s.1 <- !(X[, 1] > a1 & X[, 1] < a2 & X[, 2] > b1 & X[, 2] < b2)
       n.s.1 <- sum(d.s.1)
-      prob.tot <- 1 - n.s.1/10000
+      prob.tot <- 1 - n.s.1/NN
       z5 <- z5 + sum(circular:::DvonmisesRad(angle, direction, kappa[l-1], log = TRUE)
                      + 0.5*(log(2/pi) + log(radius)) - log(sigma[l-1]) - 0.5*radius/(sigma[l-1]^2) -
                        log(prob.tot))
@@ -435,13 +379,13 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
       angle <- atan2(z2, z1)
       angle[angle < 0] <- 2*pi + angle[angle < 0]
       direction <- mean(circular(angle, modulo = "2pi"))
-      X.st <- rnorm(10000, 0, 1)
-      temp1 <- circular:::RvonmisesRad(10000, direction, kappa.tent)
+      X.st <- rnorm(NN, 0, 1)
+      temp1 <- circular:::RvonmisesRad(NN, direction, kappa.tent)
       X <- cbind(final[[i]]$centers[1] + sigma[l]*abs(X.st)*cos(temp1),
                  final[[i]]$centers[2] + sigma[l]*abs(X.st)*sin(temp1))
       d.s.1 <- !(X[, 1] > a1 & X[, 1] < a2 & X[, 2] > b1 & X[, 2] < b2)
       n.s.1 <- sum(d.s.1)
-      prob.tot <- 1 - n.s.1/10000
+      prob.tot <- 1 - n.s.1/NN
       z5 <- z5 + sum(circular:::DvonmisesRad(angle, direction, kappa.tent, log = TRUE)
                      + 0.5*(log(2/pi) + log(radius)) - log(sigma[l]) - 0.5*radius/(sigma[l]^2) -
                        log(prob.tot))
@@ -458,13 +402,13 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
       angle <- atan2(z2, z1)
       angle[angle < 0] <- 2*pi + angle[angle < 0]
       direction <- mean(circular(angle, modulo = "2pi"))
-      X.st <- rnorm(10000, 0, 1)
-      temp1 <- circular:::RvonmisesRad(10000, direction, kappa[l-1])
+      X.st <- rnorm(NN, 0, 1)
+      temp1 <- circular:::RvonmisesRad(NN, direction, kappa[l-1])
       X <- cbind(final[[i]]$centers[1] + sigma[l]*abs(X.st)*cos(temp1),
                  final[[i]]$centers[2] + sigma[l]*abs(X.st)*sin(temp1))
       d.s.1 <- !(X[, 1] > a1 & X[, 1] < a2 & X[, 2] > b1 & X[, 2] < b2)
       n.s.1 <- sum(d.s.1)
-      prob.tot <- 1 - n.s.1/10000
+      prob.tot <- 1 - n.s.1/NN
       z5 <- z5 + sum(circular:::DvonmisesRad(angle, direction, kappa[l-1], log = TRUE)
                      + 0.5*(log(2/pi) + log(radius)) - log(sigma[l]) - 0.5*radius/(sigma[l]^2) -
                        log(prob.tot))
@@ -504,7 +448,7 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
                   window = win,
                   # R_centers = R_centers,
                   # R_clusters = R_clusters,
-                  suffMCMC = suff.mcmc,
+                  # suffMCMC = suff.mcmc,
                   logPriors = logPriors)
   class(results) <- c("fitmat3", "list")
 
