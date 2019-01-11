@@ -4,8 +4,8 @@
 \alias{predictiveStats}
 \title{Predictive Analysis for a fitmat3 object}
 \usage{
-predictiveStats(model, fname = NULL, whichSamples, additionalArgs = list(win
-  = owin(), R = 0.005, R_c = 0.02), ...)
+predictiveStats(model, fname = NULL, whichSamples,
+  additionalArgs = list(win = owin(), R = 0.005, R_c = 0.02), ...)
 }
 \arguments{
 \item{model}{An fitmat3 object (resulting from a call to fitmat3)}
@@ -27,6 +27,8 @@ it is necessary to provide a list with window, R and R_c).}
   \item{psx}{predictive probability for the standard deviation of the number of fingers}
   \item{chx}{predictive probability for the mean area of the convex hull of fingers (reactive territory)}
   \item{spx}{predictive probability for the spanned angle of fingers}
+  \item{mdx}{predictive probability for the average of minimum distance between fingers}
+  \item{adx}{predictive probability for the average of average distance between fingers}
 }
 \description{
 Evaluates the predictive posterior probability of T > T_obs for various statistics.

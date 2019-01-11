@@ -18,6 +18,8 @@
 #'   \item{psx}{predictive probability for the standard deviation of the number of fingers}
 #'   \item{chx}{predictive probability for the mean area of the convex hull of fingers (reactive territory)}
 #'   \item{spx}{predictive probability for the spanned angle of fingers}
+#'   \item{mdx}{predictive probability for the average of minimum distance between fingers}
+#'   \item{adx}{predictive probability for the average of average distance between fingers}
 predictiveStats <- function(model, fname = NULL, whichSamples, additionalArgs = list(win = owin(),
                                                                                       R = 0.005,
                                                                                       R_c = 0.02), ...){
@@ -56,6 +58,8 @@ predictiveStats <- function(model, fname = NULL, whichSamples, additionalArgs = 
   s.fingers <- sd(sapply(fmat.cond, function(x) length(x$x)))
   mchull <- mean(sapply(fmat.cond, function(x) areahull(cbind(x$x, x$y))))
   spangle <- mean(sapply(fmat.cond, spanAngle))
+  minD <- mean(sapply(fmat.cond, minDist))
+  meanD <- mean(sapply(fmat.cond, meanDist))
 
   M <- length(whichSamples)
   suff0 <- matrix(0, ncol = 2, nrow = M)
@@ -63,6 +67,8 @@ predictiveStats <- function(model, fname = NULL, whichSamples, additionalArgs = 
   s.fingers0 <- numeric(M)
   mchull0 <- numeric(M)
   spangle0 <- numeric(M)
+  minD0 <- numeric(M)
+  meanD0 <- numeric(M)
 
   for(i in seq_along(whichSamples)){
     cat(sprintf("%3.1f\n", 100*i/M))
@@ -79,6 +85,8 @@ predictiveStats <- function(model, fname = NULL, whichSamples, additionalArgs = 
     s.fingers0[i] <- sd(sapply(x, function(x) nrow(x$fingers)))
     mchull0[i] <- mean(sapply(x, function(x) areahull(x$fingers)))
     spangle0[i] <- mean(sapply(x, spanAngle))
+    minD0[i] <- mean(sapply(x, minDist))
+    meanD0[i] <- mean(sapply(x, meanDist))
   }
   suff0[,2] <- -1*suff0[,2]
   psuff1 <- sum(suff[1] < suff0[,1])/M
@@ -87,11 +95,15 @@ predictiveStats <- function(model, fname = NULL, whichSamples, additionalArgs = 
   ps <- sum(s.fingers < s.fingers0)/M
   ch <- sum(mchull < mchull0)/M
   sp <- sum(spangle < spangle0)/M
+  md <- sum(minD < minD0)/M
+  ad <- sum(meanD < meanD0)/M
 
   return(list(pL = psuff1,
               pRc = psuff2,
               pnx = pn,
               psx = ps,
               chx = ch,
-              spx = sp))
+              spx = sp,
+              mdx = md,
+              adx = ad))
 }

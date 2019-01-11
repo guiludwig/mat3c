@@ -171,14 +171,13 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
 
   # posterioriBeta
   theta.prime <- log(c(beta[1], phi[1])) # Candidates
-  prob0beta <- sum(suff.beta.phi*theta.prime) - gamma[1]*suff.all[1] + log(gamma[1])*suff.all[3] -
-    suff.all[1]*log(1 - exp(-gamma[1])) + logPriors$priorBeta(beta[1], beta.p)
+  prob0beta <- sum(suff.beta.phi*theta.prime) + logPriors$priorBeta(beta[1], beta.p)
 
   # posterioriPhi
   prob0phi <- 1
 
   # posterioriGamma
-  prob0gamma <- -gamma[1]*suff.all[1] + log(gamma[1])*suff.all[3] + suff.all[5] - suff.all*log(1 - exp(-gamma[1]))
+  prob0gamma <- -gamma[1]*suff.all[1] + log(gamma[1])*suff.all[3] + suff.all[5] - suff.all[1]*log(1 - exp(-gamma[1]))
   prob0gamma <- prob0gamma + logPriors$priorGamma(gamma[1], gamma.p)
 
   # posterioriSigma
@@ -268,12 +267,10 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
     beta.tent <- exp(rnorm(1, log(beta[l-1]), candidateVar[1]))
     # prob1
     theta.prime <- log(c(beta.tent, phi[l-1])) # Candidates
-    prob1 <- sum(suff.beta.phi*theta.prime) - gamma[l-1]*suff.all[1] + log(gamma[l-1])*suff.all[3] -
-      suff.all[1]*log(1 - exp(-gamma[l-1])) + logPriors$priorBeta(beta.tent, beta.p)
+    prob1 <- -beta.tent + sum(suff.beta.phi*theta.prime) + logPriors$priorBeta(beta.tent, beta.p)
     # prob0beta
     theta.prime <- log(c(beta[l-1], phi[l-1])) # Candidates
-    prob0beta <- sum(theta.prime*suff.beta.phi) - gamma[l-1]*suff.all[1] + log(gamma[l-1])*suff.all[3] -
-      suff.all[1]*log(1 - exp(-gamma[l-1])) + logPriors$priorBeta(beta[l-1], beta.p)
+    prob0beta <- -beta[l-1] + sum(theta.prime*suff.beta.phi) + logPriors$priorBeta(beta[l-1], beta.p)
 
     const <- beta.tent/beta[l-1]
     accept1 <- const*exp(prob1-prob0beta)
@@ -293,9 +290,9 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
     # gamma
     gamma.tent <- exp(rnorm(1, log(gamma[l-1]), candidateVar[3]))
 
-    prob1 <- -gamma.tent*suff.all[1] + log(gamma.tent)*suff.all[3] + suff.all[5] - suff.all*log(1 - exp(-gamma.tent))
+    prob1 <- -gamma.tent*suff.all[1] + log(gamma.tent)*suff.all[3] + suff.all[5] - suff.all[1]*log(1 - exp(-gamma.tent))
     prob1 <- prob1 + logPriors$priorGamma(gamma.tent, gamma.p)
-    prob0gamma <- -gamma[l-1]*suff.all[1] + log(gamma[l-1])*suff.all[3] + suff.all[5] - suff.all*log(1 - exp(-gamma[l-1]))
+    prob0gamma <- -gamma[l-1]*suff.all[1] + log(gamma[l-1])*suff.all[3] + suff.all[5] - suff.all[1]*log(1 - exp(-gamma[l-1]))
     prob0gamma <- prob0gamma + logPriors$priorGamma(gamma[l-1], gamma.p)
 
     const <- gamma.tent/gamma[l-1]
@@ -391,8 +388,8 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
                        log(prob.tot))
     }
     suff.all <- c(length(final), 0, z3, 0, z5)
-    prob0kappa <- -gamma[l]*suff.all[1] + log(gamma[l])*suff.all[3] + suff.all[5] - suff.all[1]*log(1 - exp(-gamma[l]))
-    prob0kappa <- prob0kappa + logPriors$priorKappa(kappa[l-1], kappa.p)
+    prob1 <- -gamma[l]*suff.all[1] + log(gamma[l])*suff.all[3] + suff.all[5] - suff.all[1]*log(1 - exp(-gamma[l]))
+    prob1 <- prob1 + logPriors$priorKappa(kappa.tent, kappa.p)
 
     z5 <- 0
     for(i in 1:length(final)){
@@ -414,8 +411,8 @@ fitnullmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
                        log(prob.tot))
     }
     suff.all <- c(length(final), 0, z3, 0, z5)
-    prob1 <- -gamma[l]*suff.all[1] + log(gamma[l])*suff.all[3] + suff.all[5] - suff.all[1]*log(1 - exp(-gamma[l]))
-    prob1 <- prob1 + logPriors$priorKappa(kappa.tent, kappa.p)
+    prob0kappa <- -gamma[l]*suff.all[1] + log(gamma[l])*suff.all[3] + suff.all[5] - suff.all[1]*log(1 - exp(-gamma[l]))
+    prob0kappa <- prob0kappa + logPriors$priorKappa(kappa[l-1], kappa.p)
 
     const <- kappa.tent/kappa[l-1]
     accept1 <- const*exp(prob1-prob0kappa)
