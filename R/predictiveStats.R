@@ -20,6 +20,7 @@
 #'   \item{spx}{predictive probability for the spanned angle of fingers}
 #'   \item{mdx}{predictive probability for the average of minimum distance between fingers}
 #'   \item{adx}{predictive probability for the average of average distance between fingers}
+#'   \item{cex}{predictive probability for the average distance between centers}
 predictiveStats <- function(model, fname = NULL, whichSamples, additionalArgs = list(win = owin(),
                                                                                       R = 0.005,
                                                                                       R_c = 0.02), ...){
@@ -60,6 +61,10 @@ predictiveStats <- function(model, fname = NULL, whichSamples, additionalArgs = 
   spangle <- mean(sapply(fmat.cond, spanAngle))
   minD <- mean(sapply(fmat.cond, minDist))
   meanD <- mean(sapply(fmat.cond, meanDist))
+  meanCD <- mean(dist(t(sapply(fmat.cond, function(x) x$centers, simplify = "matrix"))))
+  if(length(meanCD) == 0) {
+    meanCD <- 0
+  }
 
   M <- length(whichSamples)
   suff0 <- matrix(0, ncol = 2, nrow = M)
@@ -69,6 +74,7 @@ predictiveStats <- function(model, fname = NULL, whichSamples, additionalArgs = 
   spangle0 <- numeric(M)
   minD0 <- numeric(M)
   meanD0 <- numeric(M)
+  meanCD0 <- numeric(M)
 
   for(i in seq_along(whichSamples)){
     cat(sprintf("%3.1f\n", 100*i/M))
@@ -87,6 +93,11 @@ predictiveStats <- function(model, fname = NULL, whichSamples, additionalArgs = 
     spangle0[i] <- mean(sapply(x, spanAngle))
     minD0[i] <- mean(sapply(x, minDist))
     meanD0[i] <- mean(sapply(x, meanDist))
+    tempCD <- mean(dist(t(sapply(x, function(x) x$centers, simplify = "matrix"))))
+    if(length(tempCD) == 0) {
+      tempCD <- 0
+    }
+    meanCD0[i] <- tempCD
   }
   suff0[,2] <- -1*suff0[,2]
   psuff1 <- sum(suff[1] < suff0[,1])/M
@@ -97,6 +108,7 @@ predictiveStats <- function(model, fname = NULL, whichSamples, additionalArgs = 
   sp <- sum(spangle < spangle0)/M
   md <- sum(minD < minD0)/M
   ad <- sum(meanD < meanD0)/M
+  cd <- sum(meanCD < meanCD0)/M
 
   return(list(pL = psuff1,
               pRc = psuff2,
@@ -105,5 +117,6 @@ predictiveStats <- function(model, fname = NULL, whichSamples, additionalArgs = 
               chx = ch,
               spx = sp,
               mdx = md,
-              adx = ad))
+              adx = ad,
+              cex = cd))
 }

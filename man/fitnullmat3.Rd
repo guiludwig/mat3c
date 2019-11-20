@@ -4,11 +4,10 @@
 \alias{fitnullmat3}
 \title{Fit a Poisson marked point process model via MCMC sampling}
 \usage{
-fitnullmat3(mat3, fname = c("centers.txt", "fingers.txt"),
-  win = owin(c(0, 1), c(0, 1)), L = 10000, NN = 2000, seed = NULL,
-  resultsName = NULL, logPriors = preparePriors(),
-  initialValues = pickInitialValues(), candidateVar = c(0.1, 0.2, 0.1,
-  0.1, 0.1), verbose = TRUE, ...)
+fitnullmat3(mat3, fname = c("centers.txt", "fingers.txt"), win = owin(c(0,
+  1), c(0, 1)), L = 10000, NN = 2000, seed = NULL, resultsName = NULL,
+  logPriors = preparePriors(), initialValues = pickInitialValues(),
+  candidateVar = c(0.1, 0.2, 0.1, 0.1, 0.1), verbose = TRUE, ...)
 }
 \arguments{
 \item{mat3}{A mat3 object, see \code{\link{rmat3}}. If reading from a data file,

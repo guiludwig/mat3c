@@ -4,10 +4,10 @@
 \alias{pseudofitmat3}
 \title{Fit a Matern-III marked point process model via MCMC sampling}
 \usage{
-pseudofitmat3(mat3, fname = c("centers.txt", "fingers.txt"),
-  win = owin(c(0, 1), c(0, 1)), R_clusters = 0.005, R_centers = 0.02,
-  N = 10000, seed = NULL, resultsName = NULL,
-  initialValues = pickInitialValues(), ...)
+pseudofitmat3(mat3, fname = c("centers.txt", "fingers.txt"), win = owin(c(0,
+  1), c(0, 1)), R_clusters = 0.005, R_centers = 0.02, N = 10000,
+  seed = NULL, resultsName = NULL, initialValues = pickInitialValues(),
+  ...)
 }
 \arguments{
 \item{mat3}{A mat3 object, see \code{\link{rmat3}}. If reading from a data file,
