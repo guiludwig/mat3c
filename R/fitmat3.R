@@ -40,7 +40,9 @@
 #'              samples from which the Geyer-Thompson approximation ot the likelihood is
 #'              built; "importance" uses J samples, but they are updated at every 100
 #'              iterations. "simple" works like "importance", but sets phi = 1. "Resample"
-#'              uses a resample method on existing finger
+#'              uses a resample method on existing finger. "MollerAlt" uses an alternative
+#'              approach of auxiliary variabiles to avoid computing the normalizing constant,
+#'              described in Moller et al (2006).
 #' @param candidateVar Variability of MCMC candidate selection step, if tuning is necessary.
 #' @param verbose Prints acceptance rates for candidates. Defaults to TRUE.
 #' @param ... further arguments passed to \code{\link{read.table}}.
@@ -83,11 +85,13 @@
 #'
 #' @references
 #'
-#'   Garcia, N., Guttorp, P. and Ludwig, G. (2018) TBD
+#'   Garcia, N., Guttorp, P. and Ludwig, G. (2020) TBD
 #'
 #'   Geyer, C. J., and Thompson, E. A. (1992) "Constrained Monte Carlo maximum likelihood
-#'   for dependent data." Journal of the Royal Statistical Society. Series B (Methodological),
+#'   for dependent data." Journal of the Royal Statistical Society, Series B,
 #'   657-699.
+#'
+#'   Moller et al. (2006) TO ADD.
 #'
 #' @seealso \code{\link{rmat3}}
 #' @keywords Spatial Statistics
@@ -99,7 +103,7 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
                     resultsName = NULL,
                     logPriors = preparePriors(),
                     initialValues = pickInitialValues(),
-                    GeyerThompson = c("large", "resample", "importance", "simple"),
+                    GeyerThompson = c("large", "resample", "importance", "simple", "MollerAlt"),
                     candidateVar = c(0.1, 0.2, 0.1, 0.1, 0.1),
                     verbose = TRUE,
                     ...){
@@ -184,7 +188,8 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
                                          debug = TRUE),
                       importance = sampleZ1(beta.p, phi.p, gamma.p, sigma.p, kappa.p,
                                             win, J, R_centers, R_clusters,
-                                            debug = TRUE))
+                                            debug = TRUE),
+                      MollerAlt = matrix(0, ncol = 2, nrow = J))
   if(verbose) cat(paste0("l = ",1,"\n"))
 
   # sampled parameters initialization
@@ -215,20 +220,26 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
   suff.all <- sufficientStatAll(fmat.cond, sigma.p, kappa.p,
                                 A1 = a1, A2 = a2, B1 = b1, B2 = b2,
                                 NN = N, Rc = R_centers, R = R_clusters)
-  prob0beta <- posterioriBeta(fmat.cond, beta = beta.p,
+  if(GeyerThompson != "MollerAlt"){
+    prob0beta <- posterioriBeta(fmat.cond, beta = beta.p,
+                                phi = phi.p, gamma = gamma.p,
+                                sigma = sigma.p, kappa = kappa.p,
+                                BETA.P = beta.p,
+                                suff.beta.phi, theta.fixo, suff.mcmc,
+                                SFALL = suff.all,
+                                logpriorBeta = logPriors$priorBeta)
+    prob0phi <- posterioriPhi(fmat.cond, beta = beta.p,
                               phi = phi.p, gamma = gamma.p,
-                              sigma = sigma.p, kappa = kappa.p,
-                              BETA.P = beta.p,
+                              sigma = sigma.p, kapp = kappa.p,
+                              PHI.P = phi.p,
                               suff.beta.phi, theta.fixo, suff.mcmc,
                               SFALL = suff.all,
-                              logpriorBeta = logPriors$priorBeta)
-  prob0phi <- posterioriPhi(fmat.cond, beta = beta.p,
-                            phi = phi.p, gamma = gamma.p,
-                            sigma = sigma.p, kapp = kappa.p,
-                            PHI.P = phi.p,
-                            suff.beta.phi, theta.fixo, suff.mcmc,
-                            SFALL = suff.all,
-                            logpriorPhi = logPriors$priorPhi)
+                              logpriorPhi = logPriors$priorPhi)
+  } else {
+    # ...
+    # Find tilde-beta, tilde-phi maximum pseudolikelihood estimates
+
+  }
   prob0gamma <- posterioriGamma(fmat.cond, beta = beta.p,
                                 phi = phi.p, gamma = gamma.p,
                                 sigma = sigma.p, kappa = kappa.p,
@@ -284,7 +295,8 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
                                                 median(sigma[bur:(l-1)]),
                                                 median(kappa[bur:(l-1)]),
                                                 win, J, R_centers, R_clusters,
-                                                debug = TRUE))
+                                                debug = TRUE),
+                          MollerAlt = suff.mcmc)
     }
 
     suff.all <- sufficientStatAll(fmat.cond, sigma[l-1], kappa[l-1],
@@ -295,59 +307,63 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
 
     fmat.cond <- resampleTimes(fmat.cond, R = R_clusters)
 
-    beta.tent <- exp(rnorm(1, log(beta[l-1]), candidateVar[1]))
-    prob1 <- posterioriBeta(fmat.cond, beta.tent, phi[l-1], gamma[l-1], sigma[l-1], kappa[l-1],
-                            BETA.P = beta.p, suff.beta.phi, theta.fixo, suff.mcmc,
-                            SFALL = suff.all,
-                            logpriorBeta = logPriors$priorBeta)
-    prob0beta <- posterioriBeta(fmat.cond, beta[l-1], phi[l-1], gamma[l-1], sigma[l-1], kappa[l-1],
-                                BETA.P = beta.p, suff.beta.phi, theta.fixo, suff.mcmc,
-                                SFALL = suff.all,
-                                logpriorBeta = logPriors$priorBeta)
-
-    const <- beta.tent/beta[l-1]
-    accept1 <- const*exp(prob1-prob0beta)
-
-    if(verbose) cat(paste0("\t ratio beta = ", const, "\t"))
-    if(verbose) cat(paste0("\t accept = ", accept1, "\n"))
-
-    if (!is.nan(accept1) && runif(1) < min(1, accept1)) {
-      beta[l] <- beta.tent
-    } else {
-      beta[l] <- beta[l-1]
-    }
-
-    # https://stats.stackexchange.com/questions/178226/do-sampling-methods-mcmc-smc-work-for-combination-of-continuous-and-discrete-r
-    p.mass <- 0.2 # pnorm(1, log(phi[l-1]), candidateVar[2])
-    if(runif(1) < p.mass){
-      phi.tent <- 1
-    } else {
-      phi.tent <- exp(rnorm(1, log(phi[l-1]), candidateVar[2]))
-      while(phi.tent < 1) {
-        phi.tent <- exp(rnorm(1, log(phi[l-1]), candidateVar[2]))
-      }
-    }
-    prob1 <- posterioriPhi(fmat.cond, beta[l], phi.tent, gamma[l-1], sigma[l-1], kappa[l-1],
-                           PHI.P = phi.p,
-                           suff.beta.phi, theta.fixo, suff.mcmc,
-                           SFALL = suff.all,
-                           logpriorPhi = logPriors$priorPhi)
-    prob0phi <- posterioriPhi(fmat.cond, beta[l], phi[l-1], gamma[l-1], sigma[l-1], kappa[l-1],
-                              PHI.P = phi.p,
-                              suff.beta.phi, theta.fixo, suff.mcmc,
+    if(GeyerThompson != "MollerAlt"){
+      beta.tent <- exp(rnorm(1, log(beta[l-1]), candidateVar[1]))
+      prob1 <- posterioriBeta(fmat.cond, beta.tent, phi[l-1], gamma[l-1], sigma[l-1], kappa[l-1],
+                              BETA.P = beta.p, suff.beta.phi, theta.fixo, suff.mcmc,
                               SFALL = suff.all,
-                              logpriorPhi = logPriors$priorPhi)
+                              logpriorBeta = logPriors$priorBeta)
+      prob0beta <- posterioriBeta(fmat.cond, beta[l-1], phi[l-1], gamma[l-1], sigma[l-1], kappa[l-1],
+                                  BETA.P = beta.p, suff.beta.phi, theta.fixo, suff.mcmc,
+                                  SFALL = suff.all,
+                                  logpriorBeta = logPriors$priorBeta)
 
-    const <- phi.tent/phi[l-1]
-    accept1 <- const*exp(prob1-prob0phi)
+      const <- beta.tent/beta[l-1]
+      accept1 <- const*exp(prob1-prob0beta)
 
-    if(verbose) cat(paste0("\t ratio phi = ", const, "\t"))
-    if(verbose) cat(paste0("\t accept = ", accept1, "\n"))
+      if(verbose) cat(paste0("\t ratio beta = ", const, "\t"))
+      if(verbose) cat(paste0("\t accept = ", accept1, "\n"))
 
-    if (!is.nan(accept1) && runif(1) < min(1, accept1)) {
-      phi[l] <- phi.tent
+      if (!is.nan(accept1) && runif(1) < min(1, accept1)) {
+        beta[l] <- beta.tent
+      } else {
+        beta[l] <- beta[l-1]
+      }
+
+      # https://stats.stackexchange.com/questions/178226/do-sampling-methods-mcmc-smc-work-for-combination-of-continuous-and-discrete-r
+      p.mass <- 0.2 # pnorm(1, log(phi[l-1]), candidateVar[2])
+      if(runif(1) < p.mass){
+        phi.tent <- 1
+      } else {
+        phi.tent <- exp(rnorm(1, log(phi[l-1]), candidateVar[2]))
+        while(phi.tent < 1) {
+          phi.tent <- exp(rnorm(1, log(phi[l-1]), candidateVar[2]))
+        }
+      }
+      prob1 <- posterioriPhi(fmat.cond, beta[l], phi.tent, gamma[l-1], sigma[l-1], kappa[l-1],
+                             PHI.P = phi.p,
+                             suff.beta.phi, theta.fixo, suff.mcmc,
+                             SFALL = suff.all,
+                             logpriorPhi = logPriors$priorPhi)
+      prob0phi <- posterioriPhi(fmat.cond, beta[l], phi[l-1], gamma[l-1], sigma[l-1], kappa[l-1],
+                                PHI.P = phi.p,
+                                suff.beta.phi, theta.fixo, suff.mcmc,
+                                SFALL = suff.all,
+                                logpriorPhi = logPriors$priorPhi)
+
+      const <- phi.tent/phi[l-1]
+      accept1 <- const*exp(prob1-prob0phi)
+
+      if(verbose) cat(paste0("\t ratio phi = ", const, "\t"))
+      if(verbose) cat(paste0("\t accept = ", accept1, "\n"))
+
+      if (!is.nan(accept1) && runif(1) < min(1, accept1)) {
+        phi[l] <- phi.tent
+      } else {
+        phi[l] <- phi[l-1]
+      }
     } else {
-      phi[l] <- phi[l-1]
+      # ...
     }
 
     gamma.tent <- exp(rnorm(1, log(gamma[l-1]), candidateVar[3]))
