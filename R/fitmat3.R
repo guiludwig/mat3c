@@ -43,6 +43,9 @@
 #'              uses a resample method on existing finger. "MollerAlt" uses an alternative
 #'              approach of auxiliary variabiles to avoid computing the normalizing constant,
 #'              described in Moller et al (2006).
+#' @param tildeTheta Only needed for the "MollerAlt" option in "GeyerThompson". Corresponds
+#'              to a vector of length two, with estimates to parameters beta and phi.
+#'              Defaults to average intensity and 1.
 #' @param candidateVar Variability of MCMC candidate selection step, if tuning is necessary.
 #' @param verbose Prints acceptance rates for candidates. Defaults to TRUE.
 #' @param ... further arguments passed to \code{\link{read.table}}.
@@ -85,17 +88,21 @@
 #'
 #' @references
 #'
-#'   Garcia, N., Guttorp, P. and Ludwig, G. (2020) TBD
+#'   Garcia, N., Guttorp, P. and Ludwig, G. (2020) "Interacting cluster point process model
+#'   for epidermal nerve fibers", to appear.
 #'
 #'   Geyer, C. J., and Thompson, E. A. (1992) "Constrained Monte Carlo maximum likelihood
-#'   for dependent data." Journal of the Royal Statistical Society, Series B,
-#'   657-699.
+#'   for dependent data." Journal of the Royal Statistical Society, Series B, Vol. 54,
+#'   pp. 657-699.
 #'
-#'   Moller et al. (2006) TO ADD.
+#'   Moller, J., Pettitt, A. N., Reeves, R. and Berthelsen, K. K. (2006) "An efficient
+#'   Markov chain Monte Carlo method for distributions with intractable normalising
+#'   constants." Biometrika, Vol. 93, No. 2, pp. 451-458.
 #'
 #' @seealso \code{\link{rmat3}}
-#' @keywords Spatial Statistics
-#' @keywords Functional Data Analysis
+#' @keywords Spatial statistics
+#' @keywords Spatial point processes
+#' @keywords Bayesian methods
 fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
                     win = owin(c(0,1), c(0,1)),
                     R_clusters = 0.005, R_centers = 0.02,
@@ -103,7 +110,9 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
                     resultsName = NULL,
                     logPriors = preparePriors(),
                     initialValues = pickInitialValues(),
-                    GeyerThompson = c("large", "resample", "importance", "simple", "MollerAlt"),
+                    GeyerThompson = c("large", "resample",
+                                      "importance", "simple", "MollerAlt"),
+                    tildeTheta = c(length(mat3)/area(win), 1),
                     candidateVar = c(0.1, 0.2, 0.1, 0.1, 0.1),
                     verbose = TRUE,
                     ...){
@@ -236,9 +245,10 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
                               SFALL = suff.all,
                               logpriorPhi = logPriors$priorPhi)
   } else {
-    # ...
-    # Find tilde-beta, tilde-phi maximum pseudolikelihood estimates
-
+    xAuxiliary0 <- rmat3(tildeTheta[1], tildeTheta[2],
+                         gamma.p, sigma.p, kappa.p,
+                         win, R_clusters, R_centers)
+    suff.beta.phi.x0 <- sufficientStat(xAuxiliary0, Rc = R_centers) # suff.beta.phi
   }
   prob0gamma <- posterioriGamma(fmat.cond, beta = beta.p,
                                 phi = phi.p, gamma = gamma.p,
@@ -363,7 +373,37 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
         phi[l] <- phi[l-1]
       }
     } else {
-      # ...
+      beta.tent <- exp(rnorm(1, log(beta[l-1]), candidateVar[1])) # rlnorm
+      p.mass <- 0.2 # pnorm(1, log(phi[l-1]), candidateVar[2])
+      if(runif(1) < p.mass){
+        phi.tent <- 1
+      } else {
+        phi.tent <- exp(rnorm(1, log(phi[l-1]), candidateVar[2]))
+        while(phi.tent < 1) {
+          phi.tent <- exp(rnorm(1, log(phi[l-1]), candidateVar[2]))
+        }
+      }
+      xAuxiliary <- rmat3(beta.tent, phi.tent,
+                          gamma[l-1], sigma[l-1], kappa[l-1],
+                          win, R_clusters, R_centers)
+      suff.beta.phi.x <- sufficientStat(xAuxiliary, Rc = R_centers) # suff.beta.phi
+
+      logH <- (suff.beta.phi.x0[1]-suff.beta.phi.x[1])*log(tildeTheta[1]) + (suff.beta.phi.x0[2]-suff.beta.phi.x[2])*log(tildeTheta[2])
+      logH <- logH + (suff.beta.phi.x0[1]-suff.beta.phi[1])*log(beta[l-1]) + (suff.beta.phi.x0[2]-suff.beta.phi[2])*log(phi[l-1])
+      logH <- logH - (suff.beta.phi.x[1]-suff.beta.phi[1])*log(beta.tent) - (suff.beta.phi.x[2]-suff.beta.phi[2])*log(phi.tent)
+      logH <- logH + logPriors$priorBeta(beta.tent, beta.p) - logPriors$priorBeta(beta[l-1], beta.p)
+      logH <- logH + logPriors$priorPhi(phi.tent, phi.p) - logPriors$priorPhi(phi[l-1], phi.p)
+      logH <- logH + dlnorm(beta[l-1], log(beta.tent), candidateVar[1]) - dlnorm(beta.tent, log(beta[l-1]), candidateVar[1])
+      logH <- logH + dlnorm(phi[l-1], log(phi.tent), candidateVar[2]) - dlnorm(phi.tent, log(phi[l-1]), candidateVar[2])
+
+      if (!is.nan(logH) && runif(1) < min(1, exp(logH))) {
+        beta[l] <- beta.tent
+        phi[l] <- phi.tent
+        xAuxiliary0 <- xAuxiliary
+      } else {
+        beta[l] <- beta[l-1]
+        phi[l] <- phi[l-1]
+      }
     }
 
     gamma.tent <- exp(rnorm(1, log(gamma[l-1]), candidateVar[3]))

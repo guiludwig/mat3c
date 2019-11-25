@@ -50,11 +50,13 @@
 #'
 #' @references
 #'
-#'   Garcia, N., Guttorp, P. and Ludwig, G. (2018) TBD
+#'   Garcia, N., Guttorp, P. and Ludwig, G. (2020) "Interacting cluster point process model
+#'   for epidermal nerve fibers", to appear.
 #'
 #' @seealso \code{\link{fitmat3}}
-#' @keywords Spatial Statistics
-#' @keywords Functional Data Analysis
+#' @keywords Spatial statistics
+#' @keywords Spatial point processes
+#' @keywords Bayesian methods
 rmat3 <- function(beta, phi, gamma, sigma, kappa,
                   win = owin(c(0,1), c(0,1)),
                   R_clusters = 0.005, R_centers = 0.02,

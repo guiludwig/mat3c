@@ -69,7 +69,8 @@ x <- rmat3(70, 1/2, 5, 0.05, 3)
 
 }
 \references{
-Garcia, N., Guttorp, P. and Ludwig, G. (2018) TBD
+Garcia, N., Guttorp, P. and Ludwig, G. (2020) "Interacting cluster point process model
+  for epidermal nerve fibers", to appear.
 }
 \seealso{
 \code{\link{fitmat3}}
@@ -77,8 +78,9 @@ Garcia, N., Guttorp, P. and Ludwig, G. (2018) TBD
 \author{
 Guilherme Ludwig and Nancy Garcia
 }
-\keyword{Analysis}
-\keyword{Data}
-\keyword{Functional}
+\keyword{Bayesian}
 \keyword{Spatial}
-\keyword{Statistics}
+\keyword{methods}
+\keyword{point}
+\keyword{processes}
+\keyword{statistics}

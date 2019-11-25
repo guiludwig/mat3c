@@ -4,12 +4,13 @@
 \alias{fitmat3}
 \title{Fit a Matern-III marked point process model via MCMC sampling}
 \usage{
-fitmat3(mat3, fname = c("centers.txt", "fingers.txt"), win = owin(c(0, 1),
-  c(0, 1)), R_clusters = 0.005, R_centers = 0.02, L = 10000, N = 10000,
-  J = 100, seed = NULL, resultsName = NULL, logPriors = preparePriors(),
-  initialValues = pickInitialValues(), GeyerThompson = c("large",
-  "resample", "importance", "simple"), candidateVar = c(0.1, 0.2, 0.1, 0.1,
-  0.1), verbose = TRUE, ...)
+fitmat3(mat3, fname = c("centers.txt", "fingers.txt"), win = owin(c(0,
+  1), c(0, 1)), R_clusters = 0.005, R_centers = 0.02, L = 10000,
+  N = 10000, J = 100, seed = NULL, resultsName = NULL,
+  logPriors = preparePriors(), initialValues = pickInitialValues(),
+  GeyerThompson = c("large", "resample", "importance", "simple",
+  "MollerAlt"), tildeTheta = c(length(mat3)/area(win), 1),
+  candidateVar = c(0.1, 0.2, 0.1, 0.1, 0.1), verbose = TRUE, ...)
 }
 \arguments{
 \item{mat3}{A mat3 object, see \code{\link{rmat3}}. If reading from a data file,
@@ -62,7 +63,13 @@ step in the computation of the likelihood. The "large" option produces J*100
 samples from which the Geyer-Thompson approximation ot the likelihood is
 built; "importance" uses J samples, but they are updated at every 100
 iterations. "simple" works like "importance", but sets phi = 1. "Resample"
-uses a resample method on existing finger}
+uses a resample method on existing finger. "MollerAlt" uses an alternative
+approach of auxiliary variabiles to avoid computing the normalizing constant,
+described in Moller et al (2006).}
+
+\item{tildeTheta}{Only needed for the "MollerAlt" option in "GeyerThompson". Corresponds
+to a vector of length two, with estimates to parameters beta and phi.
+Defaults to average intensity and 1.}
 
 \item{candidateVar}{Variability of MCMC candidate selection step, if tuning is necessary.}
 
@@ -106,11 +113,16 @@ abline(h = 3, col = "Red")
 
 }
 \references{
-Garcia, N., Guttorp, P. and Ludwig, G. (2018) TBD
+Garcia, N., Guttorp, P. and Ludwig, G. (2020) "Interacting cluster point process model
+  for epidermal nerve fibers", to appear.
 
   Geyer, C. J., and Thompson, E. A. (1992) "Constrained Monte Carlo maximum likelihood
-  for dependent data." Journal of the Royal Statistical Society. Series B (Methodological),
-  657-699.
+  for dependent data." Journal of the Royal Statistical Society, Series B, Vol. 54,
+  pp. 657-699.
+
+  Moller, J., Pettitt, A. N., Reeves, R. and Berthelsen, K. K. (2006) "An efficient
+  Markov chain Monte Carlo method for distributions with intractable normalising
+  constants." Biometrika, Vol. 93, No. 2, pp. 451-458.
 }
 \seealso{
 \code{\link{rmat3}}
@@ -118,8 +130,9 @@ Garcia, N., Guttorp, P. and Ludwig, G. (2018) TBD
 \author{
 Guilherme Ludwig and Nancy Garcia
 }
-\keyword{Analysis}
-\keyword{Data}
-\keyword{Functional}
+\keyword{Bayesian}
 \keyword{Spatial}
-\keyword{Statistics}
+\keyword{methods}
+\keyword{point}
+\keyword{processes}
+\keyword{statistics}
