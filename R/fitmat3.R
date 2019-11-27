@@ -388,18 +388,19 @@ fitmat3 <- function(mat3, fname = c("centers.txt", "fingers.txt"),
                           win, R_clusters, R_centers)
       suff.beta.phi.x <- sufficientStat(xAuxiliary, Rc = R_centers) # suff.beta.phi
 
-      logH <- (suff.beta.phi.x0[1]-suff.beta.phi.x[1])*log(tildeTheta[1]) + (suff.beta.phi.x0[2]-suff.beta.phi.x[2])*log(tildeTheta[2])
+      logH <- (suff.beta.phi.x[1]-suff.beta.phi.x0[1])*log(tildeTheta[1]) + (suff.beta.phi.x[2]-suff.beta.phi.x0[2])*log(tildeTheta[2])
       logH <- logH + (suff.beta.phi.x0[1]-suff.beta.phi[1])*log(beta[l-1]) + (suff.beta.phi.x0[2]-suff.beta.phi[2])*log(phi[l-1])
       logH <- logH - (suff.beta.phi.x[1]-suff.beta.phi[1])*log(beta.tent) - (suff.beta.phi.x[2]-suff.beta.phi[2])*log(phi.tent)
       logH <- logH + logPriors$priorBeta(beta.tent, beta.p) - logPriors$priorBeta(beta[l-1], beta.p)
       logH <- logH + logPriors$priorPhi(phi.tent, phi.p) - logPriors$priorPhi(phi[l-1], phi.p)
-      logH <- logH + dlnorm(beta[l-1], log(beta.tent), candidateVar[1]) - dlnorm(beta.tent, log(beta[l-1]), candidateVar[1])
-      logH <- logH + dlnorm(phi[l-1], log(phi.tent), candidateVar[2]) - dlnorm(phi.tent, log(phi[l-1]), candidateVar[2])
+      logH <- logH + dlnorm(beta[l-1], log(beta.tent), candidateVar[1], log = TRUE) - dlnorm(beta.tent, log(beta[l-1]), candidateVar[1], log = TRUE)
+      logH <- logH + dlnorm(phi[l-1], log(phi.tent), candidateVar[2], log = TRUE) - dlnorm(phi.tent, log(phi[l-1]), candidateVar[2], log = TRUE)
 
       if (!is.nan(logH) && runif(1) < min(1, exp(logH))) {
         beta[l] <- beta.tent
         phi[l] <- phi.tent
         xAuxiliary0 <- xAuxiliary
+        suff.beta.phi.x0 <- suff.beta.phi.x
       } else {
         beta[l] <- beta[l-1]
         phi[l] <- phi[l-1]
